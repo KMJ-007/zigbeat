@@ -11,6 +11,6 @@ pub fn main() !void {
         defer rl.endDrawing();
 
         rl.clearBackground(rl.Color.ray_white);
-        rl.drawText("Hello, boy Karan!", 20, 20, 20, rl.Color.black);
+        rl.drawText("Hello, Karan!", 20, 20, 20, rl.Color.black);
     }
 }
