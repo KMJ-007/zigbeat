@@ -10,7 +10,7 @@ pub fn main() !void {
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        rl.clearBackground(rl.Color.ray_white);
-        rl.drawText("Hello, Karan!", 20, 20, 20, rl.Color.black);
+        rl.clearBackground(rl.Color.orange);
+        rl.drawText("Hello, This is working!", 20, 20, 20, rl.Color.black);
     }
 }

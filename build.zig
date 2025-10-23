@@ -35,7 +35,8 @@ pub fn build(b: *std.Build) !void {
 
     if (target.query.os_tag == .emscripten) {
         const wasm = b.addLibrary(.{
-            .name = "zigbeat",
+            // because we want index.html
+            .name = "index",
             .root_module = b.createModule(.{
                 .root_source_file = b.path("src/main.zig"),
                 .target = target,
