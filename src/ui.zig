@@ -7,6 +7,7 @@ pub const TextArea = struct {
     width: i32,
     height: i32,
     font_size: i32,
+    font: rl.Font,
 
     pub fn drawText(self: TextArea, text: [:0]const u8) void {
         const line_height = self.font_size + 2;
@@ -33,18 +34,18 @@ pub const TextArea = struct {
 
             // Draw single character
             const char_str = [2:0]u8{ char, 0 };
-            rl.drawText(&char_str, current_x, current_y, self.font_size, rl.Color.white);
+            rl.drawTextEx(self.font, &char_str, .{ .x = @floatFromInt(current_x), .y = @floatFromInt(current_y) }, @floatFromInt(self.font_size), 1, rl.Color.white);
 
             current_x += @divTrunc(self.font_size * 6, 10);
             chars_in_line += 1;
         }
     }
-    
+
     pub fn drawEditor(self: TextArea, editor: *const Editor) void {
         const text = editor.getText();
         const line_height = self.font_size + 2;
-        const char_width = @divTrunc(self.font_size * 6, 10);
-        const chars_per_line = @divTrunc(self.width, char_width);
+        const char_width = rl.measureTextEx(self.font, "M", @floatFromInt(self.font_size), 0).x;
+        const chars_per_line = @divTrunc(@as(i32, @intCast(self.width)), @as(i32, @intFromFloat(char_width)));
 
         var current_line: i32 = 0;
         var current_x: i32 = self.x;
@@ -76,9 +77,9 @@ pub const TextArea = struct {
 
             // Draw single character
             const char_str = [2:0]u8{ char, 0 };
-            rl.drawText(&char_str, current_x, current_y, self.font_size, rl.Color.white);
+            rl.drawTextEx(self.font, &char_str, .{ .x = @floatFromInt(current_x), .y = @floatFromInt(current_y) }, @floatFromInt(self.font_size), 1, rl.Color.white);
 
-            current_x += char_width;
+            current_x += @as(i32, @intFromFloat(char_width));
             chars_in_line += 1;
         }
 
@@ -97,13 +98,13 @@ pub const TextArea = struct {
     pub fn drawBorder(self: TextArea) void {
         rl.drawRectangleLines(self.x - 2, self.y - 2, self.width + 4, self.height + 4, rl.Color.gray);
     }
-    
+
     pub fn getCharsPerLine(self: TextArea) u8 {
-        const char_width = @divTrunc(self.font_size * 6, 10);
-        return @intCast(@divTrunc(self.width, char_width));
+        // Measure a character to get accurate width
+        const char_width = rl.measureTextEx(self.font, "M", @floatFromInt(self.font_size), 0).x;
+        return @intCast(@divTrunc(@as(i32, @intCast(self.width)), @as(i32, @intFromFloat(char_width))));
     }
 };
-
 
 pub fn drawTitle(params: struct {
     text: [:0]const u8,
@@ -121,6 +122,7 @@ pub fn createTextArea(params: struct {
     width: i32,
     height: i32,
     font_size: i32 = 16,
+    font: rl.Font,
 }) TextArea {
     return TextArea{
         .x = params.x,
@@ -128,5 +130,11 @@ pub fn createTextArea(params: struct {
         .width = params.width,
         .height = params.height,
         .font_size = params.font_size,
+        .font = params.font,
     };
+}
+
+pub fn loadProgrammingFont(font_path: [:0]const u8, size: i32) rl.Font {
+    // Try to load custom font, fallback to default if file not found
+    return rl.loadFontEx(font_path, size, null) catch (rl.getFontDefault() catch unreachable);
 }

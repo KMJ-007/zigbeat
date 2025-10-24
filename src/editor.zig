@@ -7,6 +7,9 @@ pub const Editor = struct {
     cursor_pos: u8 = 0,
     frames_counter: u32 = 0,
 
+    key_repeat_counter: u32 = 0,
+    last_repeated_key: rl.KeyboardKey = rl.KeyboardKey.null,
+
     pub fn init() Editor {
         return Editor{};
     }
@@ -99,8 +102,53 @@ pub const Editor = struct {
         return self.program_buffer[0..self.program_len :0];
     }
 
+    fn handleKeyRepeat(self: *Editor, key: rl.KeyboardKey, action: fn (*Editor) void) void {
+        const initial_delay = 30; // ~0.5 seconds at 60fps
+        const repeat_rate = 3; // Every 3 frames after initial delay
+
+        if (rl.isKeyPressed(key)) {
+            // First press - execute immediately
+            action(self);
+            self.last_repeated_key = key;
+            self.key_repeat_counter = 0;
+        } else if (rl.isKeyDown(key) and self.last_repeated_key == key) {
+            // Key held - handle repeat
+            self.key_repeat_counter += 1;
+            if (self.key_repeat_counter > initial_delay) {
+                if (@mod(self.key_repeat_counter - initial_delay, repeat_rate) == 0) {
+                    action(self);
+                }
+            }
+        } else if (self.last_repeated_key == key) {
+            // Key released - reset
+            self.last_repeated_key = rl.KeyboardKey.null;
+            self.key_repeat_counter = 0;
+        }
+    }
+
+    fn handleKeyRepeatWithParam(self: *Editor, key: rl.KeyboardKey, action: fn (*Editor, u8) void, param: u8) void {
+        const initial_delay = 30;
+        const repeat_rate = 3;
+
+        if (rl.isKeyPressed(key)) {
+            action(self, param);
+            self.last_repeated_key = key;
+            self.key_repeat_counter = 0;
+        } else if (rl.isKeyDown(key) and self.last_repeated_key == key) {
+            self.key_repeat_counter += 1;
+            if (self.key_repeat_counter > initial_delay) {
+                if (@mod(self.key_repeat_counter - initial_delay, repeat_rate) == 0) {
+                    action(self, param);
+                }
+            }
+        } else if (self.last_repeated_key == key) {
+            self.last_repeated_key = rl.KeyboardKey.null;
+            self.key_repeat_counter = 0;
+        }
+    }
+
     pub fn handleInput(self: *Editor, chars_per_line: u8) void {
-        // Handle character input
+        // Handle character input (GetCharPressed handles repeat automatically)
         var key = rl.getCharPressed();
         while (key > 0) {
             // Filter valid characters (space to ~)
@@ -110,27 +158,19 @@ pub const Editor = struct {
             key = rl.getCharPressed();
         }
 
-        // Handle keys (raylib handles key repeat automatically)
-        if (rl.isKeyPressed(rl.KeyboardKey.backspace)) {
-            self.removeChar();
-        }
-        if (rl.isKeyPressed(rl.KeyboardKey.left)) {
-            self.moveCursorLeft();
-        }
-        if (rl.isKeyPressed(rl.KeyboardKey.right)) {
-            self.moveCursorRight();
-        }
+        // Handle keys with repeat functionality
+        self.handleKeyRepeat(rl.KeyboardKey.backspace, Editor.removeChar);
+        self.handleKeyRepeat(rl.KeyboardKey.left, Editor.moveCursorLeft);
+        self.handleKeyRepeat(rl.KeyboardKey.right, Editor.moveCursorRight);
+        self.handleKeyRepeatWithParam(rl.KeyboardKey.up, Editor.moveCursorUp, chars_per_line);
+        self.handleKeyRepeatWithParam(rl.KeyboardKey.down, Editor.moveCursorDown, chars_per_line);
+
+        // Single press keys (no repeat needed)
         if (rl.isKeyPressed(rl.KeyboardKey.home)) {
             self.moveCursorToStart();
         }
         if (rl.isKeyPressed(rl.KeyboardKey.end)) {
             self.moveCursorToEnd();
-        }
-        if (rl.isKeyPressed(rl.KeyboardKey.up)) {
-            self.moveCursorUp(chars_per_line);
-        }
-        if (rl.isKeyPressed(rl.KeyboardKey.down)) {
-            self.moveCursorDown(chars_per_line);
         }
         if (rl.isKeyPressed(rl.KeyboardKey.escape)) {
             // Clear all text
