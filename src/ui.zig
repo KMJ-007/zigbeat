@@ -1,3 +1,4 @@
+const std = @import("std");
 const rl = @import("raylib");
 const Editor = @import("editor.zig").Editor;
 
@@ -33,7 +34,7 @@ pub const TextArea = struct {
             }
 
             // Draw single character
-            const char_str = [2:0]u8{ char, 0 };
+            const char_str = [_:0]u8{char};
             rl.drawTextEx(self.font, &char_str, .{ .x = @floatFromInt(current_x), .y = @floatFromInt(current_y) }, @floatFromInt(self.font_size), 1, rl.Color.white);
 
             current_x += @divTrunc(self.font_size * 6, 10);
@@ -76,7 +77,7 @@ pub const TextArea = struct {
             }
 
             // Draw single character
-            const char_str = [2:0]u8{ char, 0 };
+            const char_str = [_:0]u8{char};
             rl.drawTextEx(self.font, &char_str, .{ .x = @floatFromInt(current_x), .y = @floatFromInt(current_y) }, @floatFromInt(self.font_size), 1, rl.Color.white);
 
             current_x += @as(i32, @intFromFloat(char_width));
@@ -99,7 +100,7 @@ pub const TextArea = struct {
         rl.drawRectangleLines(self.x - 2, self.y - 2, self.width + 4, self.height + 4, rl.Color.gray);
     }
 
-    pub fn getCharsPerLine(self: TextArea) u8 {
+    pub fn getCharsPerLine(self: TextArea) usize {
         // Measure a character to get accurate width
         const char_width = rl.measureTextEx(self.font, "M", @floatFromInt(self.font_size), 0).x;
         return @intCast(@divTrunc(@as(i32, @intCast(self.width)), @as(i32, @intFromFloat(char_width))));
@@ -137,4 +138,39 @@ pub fn createTextArea(params: struct {
 pub fn loadProgrammingFont(font_path: [:0]const u8, size: i32) rl.Font {
     // Try to load custom font, fallback to default if file not found
     return rl.loadFontEx(font_path, size, null) catch (rl.getFontDefault() catch unreachable);
+}
+
+pub fn drawErrorMessage(params: struct {
+    message: []const u8,
+    x: i32,
+    y: i32,
+    font_size: i32 = 16,
+    color: rl.Color = rl.Color.red,
+    background_color: rl.Color = rl.Color.black,
+}) void {
+    // Draw background rectangle for better visibility
+    var message_buf: [256:0]u8 = undefined;
+    const message_z = std.fmt.bufPrintZ(&message_buf, "{s}", .{params.message}) catch "Error";
+    const text_width = rl.measureText(message_z, params.font_size);
+    const padding = 10;
+    
+    rl.drawRectangle(
+        params.x - padding, 
+        params.y - padding/2, 
+        text_width + padding * 2, 
+        params.font_size + padding,
+        params.background_color
+    );
+    
+    // Draw border
+    rl.drawRectangleLines(
+        params.x - padding, 
+        params.y - padding/2, 
+        text_width + padding * 2, 
+        params.font_size + padding,
+        params.color
+    );
+    
+    // Draw error text (using already converted string)
+    rl.drawText(message_z, params.x, params.y, params.font_size, params.color);
 }

@@ -2,50 +2,47 @@ const std = @import("std");
 const rl = @import("raylib");
 
 pub const Editor = struct {
-    program_buffer: [255:0]u8 = std.mem.zeroes([255:0]u8),
-    program_len: u8 = 0,
-    cursor_pos: u8 = 0,
+    allocator: std.mem.Allocator,
+    program: std.ArrayList(u8),
+    cursor_pos: usize = 0,
     frames_counter: u32 = 0,
 
     key_repeat_counter: u32 = 0,
     last_repeated_key: rl.KeyboardKey = rl.KeyboardKey.null,
+    
+    // Error handling
+    error_message: ?[]const u8 = null,
+    error_display_frames: u32 = 0,
 
-    pub fn init() Editor {
-        return Editor{};
+    pub fn init(allocator: std.mem.Allocator) !Editor {
+        return Editor{
+            .allocator = allocator,
+            .program = std.ArrayList(u8).empty,
+        };
+    }
+
+    pub fn deinit(self: *Editor) void {
+        self.program.deinit(self.allocator);
     }
 
     pub fn addChar(self: *Editor, char: u8) void {
-        if (self.program_len < self.program_buffer.len - 1) {
-            // Insert character at cursor position
-            if (self.cursor_pos < self.program_len) {
-                // Shift characters right to make space
-                var i: u8 = self.program_len;
-                while (i > self.cursor_pos) {
-                    self.program_buffer[i] = self.program_buffer[i - 1];
-                    i -= 1;
-                }
+        self.program.insert(self.allocator, self.cursor_pos, char) catch |err| {
+            switch (err) {
+                error.OutOfMemory => self.setError("Out of memory - cannot add more text"),
             }
-
-            self.program_buffer[self.cursor_pos] = char;
-            self.program_len += 1;
-            self.cursor_pos += 1;
-            self.program_buffer[self.program_len] = 0;
+            return;
+        };
+        self.cursor_pos += 1;
+        // Clear any previous errors on successful operation
+        if (self.hasError()) {
+            self.clearError();
         }
     }
 
     pub fn removeChar(self: *Editor) void {
-        if (self.cursor_pos > 0 and self.program_len > 0) {
+        if (self.cursor_pos > 0 and self.program.items.len > 0) {
             self.cursor_pos -= 1;
-
-            // Shift characters left to fill gap
-            var i: u8 = self.cursor_pos;
-            while (i < self.program_len - 1) {
-                self.program_buffer[i] = self.program_buffer[i + 1];
-                i += 1;
-            }
-
-            self.program_len -= 1;
-            self.program_buffer[self.program_len] = 0;
+            _ = self.program.orderedRemove(self.cursor_pos);
         }
     }
 
@@ -56,7 +53,7 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorRight(self: *Editor) void {
-        if (self.cursor_pos < self.program_len) {
+        if (self.cursor_pos < self.program.items.len) {
             self.cursor_pos += 1;
         }
     }
@@ -66,31 +63,58 @@ pub const Editor = struct {
     }
 
     pub fn moveCursorToEnd(self: *Editor) void {
-        self.cursor_pos = self.program_len;
+        self.cursor_pos = self.program.items.len;
     }
 
-    pub fn moveCursorUp(self: *Editor, chars_per_line: u8) void {
+    pub fn moveCursorUp(self: *Editor, chars_per_line: usize) void {
         if (self.cursor_pos >= chars_per_line) {
             self.cursor_pos -= chars_per_line;
             // Clamp to line end if line is shorter
-            if (self.cursor_pos > self.program_len) {
-                self.cursor_pos = self.program_len;
+            if (self.cursor_pos > self.program.items.len) {
+                self.cursor_pos = self.program.items.len;
             }
         }
     }
 
-    pub fn moveCursorDown(self: *Editor, chars_per_line: u8) void {
+    pub fn moveCursorDown(self: *Editor, chars_per_line: usize) void {
         const new_pos = self.cursor_pos + chars_per_line;
-        if (new_pos <= self.program_len) {
-            self.cursor_pos = @intCast(new_pos);
+        if (new_pos <= self.program.items.len) {
+            self.cursor_pos = new_pos;
         } else {
             // Move to end of text if going past
-            self.cursor_pos = self.program_len;
+            self.cursor_pos = self.program.items.len;
         }
     }
 
     pub fn update(self: *Editor) void {
         self.frames_counter += 1;
+        
+        // Update error display timer
+        if (self.error_message != null) {
+            self.error_display_frames += 1;
+            // Clear error after 3 seconds (180 frames at 60fps)
+            if (self.error_display_frames >= 180) {
+                self.clearError();
+            }
+        }
+    }
+    
+    pub fn setError(self: *Editor, message: []const u8) void {
+        self.error_message = message;
+        self.error_display_frames = 0;
+    }
+    
+    pub fn clearError(self: *Editor) void {
+        self.error_message = null;
+        self.error_display_frames = 0;
+    }
+    
+    pub fn hasError(self: *const Editor) bool {
+        return self.error_message != null;
+    }
+    
+    pub fn getErrorMessage(self: *const Editor) ?[]const u8 {
+        return self.error_message;
     }
 
     pub fn getCursorVisible(self: *const Editor) bool {
@@ -98,8 +122,8 @@ pub const Editor = struct {
         return @mod(@divTrunc(self.frames_counter, 20), 2) == 0;
     }
 
-    pub fn getText(self: *const Editor) [:0]const u8 {
-        return self.program_buffer[0..self.program_len :0];
+    pub fn getText(self: *const Editor) []const u8 {
+        return self.program.items;
     }
 
     fn handleKeyRepeat(self: *Editor, key: rl.KeyboardKey, action: fn (*Editor) void) void {
@@ -126,7 +150,7 @@ pub const Editor = struct {
         }
     }
 
-    fn handleKeyRepeatWithParam(self: *Editor, key: rl.KeyboardKey, action: fn (*Editor, u8) void, param: u8) void {
+    fn handleKeyRepeatWithParam(self: *Editor, key: rl.KeyboardKey, action: fn (*Editor, usize) void, param: usize) void {
         const initial_delay = 30;
         const repeat_rate = 3;
 
@@ -147,7 +171,7 @@ pub const Editor = struct {
         }
     }
 
-    pub fn handleInput(self: *Editor, chars_per_line: u8) void {
+    pub fn handleInput(self: *Editor, chars_per_line: usize) void {
         // Handle character input (GetCharPressed handles repeat automatically)
         var key = rl.getCharPressed();
         while (key > 0) {
@@ -173,10 +197,14 @@ pub const Editor = struct {
             self.moveCursorToEnd();
         }
         if (rl.isKeyPressed(rl.KeyboardKey.escape)) {
-            // Clear all text
-            self.program_len = 0;
-            self.cursor_pos = 0;
-            self.program_buffer[0] = 0;
+            // If there's an error, clear it first. If no error, clear all text
+            if (self.hasError()) {
+                self.clearError();
+            } else {
+                // Clear all text
+                self.cursor_pos = 0;
+                self.program.clearAndFree(self.allocator);
+            }
         }
     }
 };

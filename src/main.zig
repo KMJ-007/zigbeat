@@ -3,10 +3,14 @@ const rl = @import("raylib");
 const Editor = @import("editor.zig").Editor;
 const ui = @import("ui.zig");
 const Window = @import("window.zig").Window;
+const customAllocator = @import("allocator.zig").CustomAllocator;
 
 pub fn main() !void {
+    var gpa = customAllocator{};
+    const allocator = gpa.allocator();
     // Initialize editor
-    var editor = Editor.init();
+    var editor = try Editor.init(allocator);
+    defer editor.deinit();
 
     // Initialize window
     var window = Window.init(.{
@@ -24,7 +28,6 @@ pub fn main() !void {
         window.handleResize();
         window.handleFullscreenToggle();
 
-        // ============= Update =============
         editor.update();
 
         // Create text area to get dimensions for input handling
@@ -53,5 +56,15 @@ pub fn main() !void {
         });
 
         text_area.drawEditor(&editor);
+
+        // Draw error message at the bottom if there is one
+        if (editor.getErrorMessage()) |error_msg| {
+            ui.drawErrorMessage(.{
+                .message = error_msg,
+                .x = 20,
+                .y = window.height - 40,
+                .font_size = 16,
+            });
+        }
     }
 }

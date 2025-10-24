@@ -35,15 +35,25 @@ pub fn build(b: *std.Build) !void {
     wasm.linkLibrary(raylib_artifact_web);
 
     // Configure Emscripten compiler flags and settings
-    const emcc_flags = rlz.emsdk.emccDefaultFlags(b.allocator, .{
+    var emcc_flags = rlz.emsdk.emccDefaultFlags(b.allocator, .{
         .optimize = optimize,
     });
     const emcc_settings = rlz.emsdk.emccDefaultSettings(b.allocator, .{
         .optimize = optimize,
     });
 
+    // Add preload assets flags for web build
+    try emcc_flags.put("--preload-file", {});
+    try emcc_flags.put("assets", {});
+
     // Compile WASM with Emscripten using custom shell template
-    const emcc_step = rlz.emsdk.emccStep(b, raylib_artifact_web, wasm, .{ .optimize = optimize, .flags = emcc_flags, .settings = emcc_settings, .shell_file_path = b.path("shell.html"), .install_dir = .{ .custom = "web" } });
+    const emcc_step = rlz.emsdk.emccStep(b, raylib_artifact_web, wasm, .{ 
+        .optimize = optimize, 
+        .flags = emcc_flags, 
+        .settings = emcc_settings, 
+        .shell_file_path = b.path("shell.html"), 
+        .install_dir = .{ .custom = "web" } 
+    });
 
     const web_step = b.step("web", "Build web bundle");
     web_step.dependOn(emcc_step);
