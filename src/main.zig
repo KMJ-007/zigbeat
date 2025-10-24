@@ -1,43 +1,56 @@
+const std = @import("std");
 const rl = @import("raylib");
+const Editor = @import("editor.zig").Editor;
+const ui = @import("ui.zig");
+const Window = @import("window.zig").Window;
 
 pub fn main() !void {
-    defer rl.closeWindow();
+    // Initialize allocator
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
 
-    var screenWidth: i32 = 800;
-    var screenHeight: i32 = 450;
+    // Initialize editor
+    var editor = Editor.init();
 
-    rl.initWindow(screenWidth, screenHeight, "Zigbeat");
-    rl.setWindowState(rl.ConfigFlags{ .window_resizable = true });
-    rl.setTargetFPS(60);
+    // Initialize window
+    var window = Window.init(.{
+        .width = 800,
+        .height = 450,
+        .title = "Zigbeat",
+        .target_fps = 60,
+    });
+    defer window.deinit();
 
-    while (!rl.windowShouldClose()) {
-        // Update screen dimensions when window is resized (but not in fullscreen)
-        if (rl.isWindowResized() and !rl.isWindowFullscreen()) {
-            screenWidth = rl.getScreenWidth();
-            screenHeight = rl.getScreenHeight();
-        }
+    while (!window.shouldClose()) {
+        // ============= Window Management =============
+        window.handleResize();
+        window.handleFullscreenToggle();
 
-        // check for alt + enter
-        if (rl.isKeyPressed(rl.KeyboardKey.enter) and (rl.isKeyDown(rl.KeyboardKey.left_alt) or rl.isKeyDown(rl.KeyboardKey.right_alt))) {
-            // see what display we are on right now
-            const display = rl.getCurrentMonitor();
+        // ============= Update =============
+        editor.update();
+        editor.handleInput();
 
-            if (rl.isWindowFullscreen()) {
-                // if we are full screen, then go back to the windowed size
-                rl.setWindowSize(screenWidth, screenHeight);
-            } else {
-                // if we are not full screen, set the window size to match the monitor we are on
-                rl.setWindowSize(rl.getMonitorWidth(display), rl.getMonitorHeight(display));
-            }
+        // ============= Draw =============
+        window.beginDrawing();
+        defer window.endDrawing();
 
-            // toggle the state
-            rl.toggleFullscreen();
-        }
+        window.clearBackground(rl.Color.black);
 
-        rl.beginDrawing();
-        defer rl.endDrawing();
+        ui.drawTitle(.{
+            .text = "Zigbeat - Bytebeat Editor",
+            .x = 20,
+            .y = 20,
+            .font_size = 20,
+        });
 
-        rl.clearBackground(rl.Color.orange);
-        rl.drawText("Hello, This is working!", 20, 20, 20, rl.Color.black);
+        // Create and draw text area
+        const text_area = ui.createTextArea(.{
+            .x = 50,
+            .y = 60,
+            .width = window.width - 100,
+            .height = window.height - 120,
+        });
+
+        text_area.drawEditor(&editor);
     }
 }
