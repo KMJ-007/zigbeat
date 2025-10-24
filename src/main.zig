@@ -28,7 +28,16 @@ pub fn main() !void {
 
         // ============= Update =============
         editor.update();
-        editor.handleInput();
+        
+        // Create text area to get dimensions for input handling
+        const text_area = ui.createTextArea(.{
+            .x = 50,
+            .y = 60,
+            .width = window.width - 100,
+            .height = window.height - 120,
+        });
+        
+        editor.handleInput(text_area.getCharsPerLine());
 
         // ============= Draw =============
         window.beginDrawing();
@@ -43,14 +52,8 @@ pub fn main() !void {
             .font_size = 20,
         });
 
-        // Create and draw text area
-        const text_area = ui.createTextArea(.{
-            .x = 50,
-            .y = 60,
-            .width = window.width - 100,
-            .height = window.height - 120,
-        });
-
+        // Draw text area (reuse the same dimensions)
+        text_area.drawBorder();
         text_area.drawEditor(&editor);
     }
 }

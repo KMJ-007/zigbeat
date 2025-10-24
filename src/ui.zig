@@ -97,6 +97,11 @@ pub const TextArea = struct {
     pub fn drawBorder(self: TextArea) void {
         rl.drawRectangleLines(self.x - 2, self.y - 2, self.width + 4, self.height + 4, rl.Color.gray);
     }
+    
+    pub fn getCharsPerLine(self: TextArea) u8 {
+        const char_width = @divTrunc(self.font_size * 6, 10);
+        return @intCast(@divTrunc(self.width, char_width));
+    }
 };
 
 
