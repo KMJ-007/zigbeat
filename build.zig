@@ -47,13 +47,7 @@ pub fn build(b: *std.Build) !void {
     try emcc_flags.put("assets", {});
 
     // Compile WASM with Emscripten using custom shell template
-    const emcc_step = rlz.emsdk.emccStep(b, raylib_artifact_web, wasm, .{ 
-        .optimize = optimize, 
-        .flags = emcc_flags, 
-        .settings = emcc_settings, 
-        .shell_file_path = b.path("shell.html"), 
-        .install_dir = .{ .custom = "web" } 
-    });
+    const emcc_step = rlz.emsdk.emccStep(b, raylib_artifact_web, wasm, .{ .optimize = optimize, .flags = emcc_flags, .settings = emcc_settings, .shell_file_path = b.path("shell.html"), .install_dir = .{ .custom = "web" } });
 
     const web_step = b.step("web", "Build web bundle");
     web_step.dependOn(emcc_step);
@@ -92,4 +86,17 @@ pub fn build(b: *std.Build) !void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+    const tests = b.addTest(.{
+        .name = "zigbeat_tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/evaluator.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    const run_tests = b.addRunArtifact(tests);
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_tests.step);
 }

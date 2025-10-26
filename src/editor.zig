@@ -9,7 +9,7 @@ pub const Editor = struct {
 
     key_repeat_counter: u32 = 0,
     last_repeated_key: rl.KeyboardKey = rl.KeyboardKey.null,
-    
+
     // Error handling
     error_message: ?[]const u8 = null,
     error_display_frames: u32 = 0,
@@ -88,7 +88,7 @@ pub const Editor = struct {
 
     pub fn update(self: *Editor) void {
         self.frames_counter += 1;
-        
+
         // Update error display timer
         if (self.error_message != null) {
             self.error_display_frames += 1;
@@ -98,21 +98,21 @@ pub const Editor = struct {
             }
         }
     }
-    
+
     pub fn setError(self: *Editor, message: []const u8) void {
         self.error_message = message;
         self.error_display_frames = 0;
     }
-    
+
     pub fn clearError(self: *Editor) void {
         self.error_message = null;
         self.error_display_frames = 0;
     }
-    
+
     pub fn hasError(self: *const Editor) bool {
         return self.error_message != null;
     }
-    
+
     pub fn getErrorMessage(self: *const Editor) ?[]const u8 {
         return self.error_message;
     }

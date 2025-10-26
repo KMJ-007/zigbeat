@@ -10,35 +10,35 @@ var gpa = if (builtin.os.tag != .emscripten and builtin.os.tag != .wasi and buil
 
 pub const CustomAllocator =
     struct {
-    const Self = @This();
-    pub fn allocator(_: *Self) Allocator {
-        return switch (builtin.os.tag) {
-            .emscripten, .wasi => Allocator{
-                .ptr = undefined,
-                .vtable = &e_allocator_vtable,
-            },
-            else => switch (builtin.mode) {
-                .Debug, .ReleaseSafe => gpa.allocator(),
-                else => std.heap.c_allocator,
-            },
-        };
-    }
-
-    pub fn deinit(_: *Self) bool {
-        switch (builtin.os.tag) {
-            .emscripten, .wasi => {
-                std.log.info("deinit not implemented for EmscriptenAllocator", .{});
-                return false;
-            },
-            else => {
-                return if (builtin.mode != .ReleaseFast and builtin.mode != .ReleaseSmall)
-                    gpa.deinit() == .leak
-                else
-                    false;
-            },
+        const Self = @This();
+        pub fn allocator(_: *Self) Allocator {
+            return switch (builtin.os.tag) {
+                .emscripten, .wasi => Allocator{
+                    .ptr = undefined,
+                    .vtable = &e_allocator_vtable,
+                },
+                else => switch (builtin.mode) {
+                    .Debug, .ReleaseSafe => gpa.allocator(),
+                    else => std.heap.c_allocator,
+                },
+            };
         }
-    }
-};
+
+        pub fn deinit(_: *Self) bool {
+            switch (builtin.os.tag) {
+                .emscripten, .wasi => {
+                    std.log.info("deinit not implemented for EmscriptenAllocator", .{});
+                    return false;
+                },
+                else => {
+                    return if (builtin.mode != .ReleaseFast and builtin.mode != .ReleaseSmall)
+                        gpa.deinit() == .leak
+                    else
+                        false;
+                },
+            }
+        }
+    };
 
 const e_allocator_vtable = Allocator.VTable{
     .alloc = EmscriptenAllocator.alloc,
@@ -56,7 +56,7 @@ const EmscriptenAllocator = struct {
     });
 
     pub const supports_malloc_size = @hasDecl(c, "malloc_size") or @hasDecl(c, "malloc_usable_size") or @hasDecl(c, "_msize");
-    
+
     pub const malloc_size = if (@hasDecl(c, "malloc_size"))
         c.malloc_size
     else if (@hasDecl(c, "malloc_usable_size"))

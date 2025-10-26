@@ -153,24 +153,12 @@ pub fn drawErrorMessage(params: struct {
     const message_z = std.fmt.bufPrintZ(&message_buf, "{s}", .{params.message}) catch "Error";
     const text_width = rl.measureText(message_z, params.font_size);
     const padding = 10;
-    
-    rl.drawRectangle(
-        params.x - padding, 
-        params.y - padding/2, 
-        text_width + padding * 2, 
-        params.font_size + padding,
-        params.background_color
-    );
-    
+
+    rl.drawRectangle(params.x - padding, params.y - padding / 2, text_width + padding * 2, params.font_size + padding, params.background_color);
+
     // Draw border
-    rl.drawRectangleLines(
-        params.x - padding, 
-        params.y - padding/2, 
-        text_width + padding * 2, 
-        params.font_size + padding,
-        params.color
-    );
-    
+    rl.drawRectangleLines(params.x - padding, params.y - padding / 2, text_width + padding * 2, params.font_size + padding, params.color);
+
     // Draw error text (using already converted string)
     rl.drawText(message_z, params.x, params.y, params.font_size, params.color);
 }
