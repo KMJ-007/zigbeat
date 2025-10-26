@@ -4,6 +4,8 @@ const Editor = @import("editor.zig").Editor;
 const ui = @import("ui.zig");
 const Window = @import("window.zig").Window;
 const customAllocator = @import("allocator.zig").CustomAllocator;
+const AudioSystem = @import("audio.zig").AudioSystem;
+const Evaluator = @import("evaluator.zig").Evaluator;
 
 pub fn main() !void {
     var gpa = customAllocator{};
@@ -11,6 +13,26 @@ pub fn main() !void {
     // Initialize editor
     var editor = try Editor.init(allocator);
     defer editor.deinit();
+
+    var expr = std.ArrayList(u8).empty;
+    try expr.appendSlice(allocator, "t");
+
+    var evaluator = try Evaluator.init(allocator, .{
+        .expression =  expr,
+        .beat_type = .bytebeat,
+        .sample_rate = .rate_8000
+    });
+    defer evaluator.deinit();
+
+    // Intialize Audio
+    rl.initAudioDevice();
+    defer rl.closeAudioDevice();
+
+    var audio = try AudioSystem.init(&evaluator);
+    defer audio.deinit();
+
+    audio.activate();
+    audio.play();
 
     // Initialize window
     var window = Window.init(.{
@@ -56,6 +78,16 @@ pub fn main() !void {
         });
 
         text_area.drawEditor(&editor);
+
+        // Debug: Show audio time
+        const audio_time = audio.getTime();
+        const sample_rate = audio.getSampleRate();
+        const total_ms = (@as(u64, audio_time) * 1000) / @as(u64, sample_rate);
+        const seconds = total_ms / 1000;
+        const milliseconds = total_ms % 1000;
+        var debug_buf: [64:0]u8 = undefined;
+        const debug_text = std.fmt.bufPrintZ(&debug_buf, "Audio Time: {d}s {d}ms", .{seconds, milliseconds}) catch unreachable;
+        rl.drawText(debug_text, 20, window.height - 70, 14, rl.Color.green);
 
         // Draw error message at the bottom if there is one
         if (editor.getErrorMessage()) |error_msg| {
