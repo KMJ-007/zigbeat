@@ -6,6 +6,7 @@ pub const Editor = struct {
     program: std.ArrayList(u8),
     cursor_pos: usize = 0,
     frames_counter: u32 = 0,
+    text_dirty: bool = false,
 
     key_repeat_counter: u32 = 0,
     last_repeated_key: rl.KeyboardKey = rl.KeyboardKey.null,
@@ -21,6 +22,21 @@ pub const Editor = struct {
         };
     }
 
+    pub fn setText(self: *Editor, text: []const u8) !void {
+        self.program.clearRetainingCapacity();
+        try self.program.appendSlice(self.allocator, text);
+        self.cursor_pos = self.program.items.len;
+        self.text_dirty = true;
+    }
+
+    pub fn isDirty(self: *const Editor) bool {
+        return self.text_dirty;
+    }
+
+    pub fn markClean(self: *Editor) void {
+        self.text_dirty = false;
+    }
+
     pub fn deinit(self: *Editor) void {
         self.program.deinit(self.allocator);
     }
@@ -33,6 +49,7 @@ pub const Editor = struct {
             return;
         };
         self.cursor_pos += 1;
+        self.text_dirty = true;
         // Clear any previous errors on successful operation
         if (self.hasError()) {
             self.clearError();
@@ -43,6 +60,7 @@ pub const Editor = struct {
         if (self.cursor_pos > 0 and self.program.items.len > 0) {
             self.cursor_pos -= 1;
             _ = self.program.orderedRemove(self.cursor_pos);
+            self.text_dirty = true;
         }
     }
 
@@ -204,6 +222,7 @@ pub const Editor = struct {
                 // Clear all text
                 self.cursor_pos = 0;
                 self.program.clearAndFree(self.allocator);
+                self.text_dirty = true;
             }
         }
     }
