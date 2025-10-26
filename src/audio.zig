@@ -8,6 +8,7 @@ pub const AudioSystem = struct {
     evaluator: *Evaluator,
     time: u32 = 0,
     current_rate: SampleRate,
+    muted: bool = false,
 
     pub fn init(evaulator: *Evaluator)!AudioSystem {
         const hz = sampleRateToHz(evaulator.config.sample_rate);
@@ -15,7 +16,8 @@ pub const AudioSystem = struct {
         const self = AudioSystem{
             .stream = stream,
             .evaluator = evaulator,
-            .current_rate = evaulator.config.sample_rate
+            .current_rate = evaulator.config.sample_rate,
+            .muted = false,
         };
 
         rl.setAudioStreamCallback(stream, audioCallback);
@@ -37,6 +39,18 @@ pub const AudioSystem = struct {
 
        pub fn stop(self: *AudioSystem) void {
            rl.stopAudioStream(self.stream);
+       }
+
+       pub fn isPlaying(self: *const AudioSystem) bool {
+           return rl.isAudioStreamPlaying(self.stream);
+       }
+
+       pub fn setMuted(self: *AudioSystem, muted: bool) void {
+           self.muted = muted;
+       }
+
+       pub fn isMuted(self: *const AudioSystem) bool {
+           return self.muted;
        }
 
        pub fn reset(self: *AudioSystem) void {
@@ -93,7 +107,17 @@ export fn audioCallback(buffer_ptr: ?*anyopaque, frames: c_uint) callconv(.c) vo
       const system = g_audio orelse return;
       const buffer = @as([*]i16, @ptrCast(@alignCast(buffer_ptr)));
 
-      for (0..frames) |i| {
+      const frame_count: usize = @intCast(frames);
+
+      if (system.muted) {
+          const samples = buffer[0..frame_count];
+          @memset(samples, 0);
+          const frames_u32: u32 = @intCast(frame_count);
+          system.time +%= frames_u32;
+          return;
+      }
+
+      for (0..frame_count) |i| {
           const value = system.evaluator.evaluate(system.time) catch 0.0;
           const sample = switch (system.evaluator.config.beat_type) {
               .bytebeat => convertBytebeat(value),

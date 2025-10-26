@@ -13,9 +13,10 @@ pub fn main() !void {
     // Initialize editor
     var editor = try Editor.init(allocator);
     defer editor.deinit();
+    try editor.setText("");
+    editor.markClean();
 
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression =  expr,
@@ -23,6 +24,10 @@ pub fn main() !void {
         .sample_rate = .rate_8000
     });
     defer evaluator.deinit();
+    const initial_text = editor.getText();
+    if (initial_text.len > 0) {
+        try evaluator.setExpression(initial_text);
+    }
 
     // Intialize Audio
     rl.initAudioDevice();
@@ -32,6 +37,7 @@ pub fn main() !void {
     defer audio.deinit();
 
     audio.activate();
+    audio.setMuted(true);
     audio.play();
 
     // Initialize window
@@ -63,6 +69,45 @@ pub fn main() !void {
         });
 
         editor.handleInput(text_area.getCharsPerLine());
+        if (editor.isDirty()) {
+            const text = editor.getText();
+            if (text.len == 0) {
+                audio.setMuted(true);
+                if (!audio.isPlaying()) {
+                    audio.play();
+                }
+                if (editor.hasError()) {
+                    editor.clearError();
+                }
+            } else {
+                var sync_failed = false;
+                evaluator.setExpression(text) catch |err| {
+                    sync_failed = true;
+                    const message = switch (err) {
+                        error.EmptyExpression => "Expression cannot be empty",
+                        error.UnsupportedExpression => "Expression not supported yet",
+                        error.OutOfMemory => "Out of memory while updating expression",
+                        else => @errorName(err),
+                    };
+                    editor.setError(message);
+                };
+                if (!sync_failed) {
+                    if (editor.hasError()) {
+                        editor.clearError();
+                    }
+                    audio.setMuted(false);
+                    if (!audio.isPlaying()) {
+                        audio.play();
+                    }
+                } else {
+                    audio.setMuted(true);
+                    if (!audio.isPlaying()) {
+                        audio.play();
+                    }
+                }
+            }
+            editor.markClean();
+        }
 
         // ============= Draw =============
         window.beginDrawing();
@@ -80,13 +125,14 @@ pub fn main() !void {
         text_area.drawEditor(&editor);
 
         // Debug: Show audio time
-        const audio_time = audio.getTime();
-        const sample_rate = audio.getSampleRate();
-        const total_ms = (@as(u64, audio_time) * 1000) / @as(u64, sample_rate);
-        const seconds = total_ms / 1000;
-        const milliseconds = total_ms % 1000;
-        var debug_buf: [64:0]u8 = undefined;
-        const debug_text = std.fmt.bufPrintZ(&debug_buf, "Audio Time: {d}s {d}ms", .{seconds, milliseconds}) catch unreachable;
+        const audio_samples = audio.getTime();
+
+        var debug_buf: [96:0]u8 = undefined;
+        const debug_text = std.fmt.bufPrintZ(
+            &debug_buf,
+            "Audio Samples: {d}",
+            .{ audio_samples},
+        ) catch unreachable;
         rl.drawText(debug_text, 20, window.height - 70, 14, rl.Color.green);
 
         // Draw error message at the bottom if there is one

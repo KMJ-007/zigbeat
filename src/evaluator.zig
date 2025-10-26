@@ -27,6 +27,13 @@ pub const Evaluator = struct {
         return Evaluator{ .config = config, .allocator = allocator };
     }
 
+    pub fn setExpression(self: *Evaluator, expression: []const u8) !void {
+        if (expression.len == 0) return error.EmptyExpression;
+        try self.validateExpression(expression);
+        self.config.expression.clearRetainingCapacity();
+        try self.config.expression.appendSlice(self.allocator, expression);
+    }
+
     pub fn deinit(self: *Evaluator) void {
         self.config.expression.deinit(self.allocator);
     }
@@ -48,6 +55,15 @@ pub const Evaluator = struct {
 
         // Evaluate the AST
         return try self.evaluateNode(ast_root,t);
+    }
+
+    fn validateExpression(self: *Evaluator, expression: []const u8) !void {
+        var parser = Parser.init(self.allocator, expression);
+        defer parser.deinit();
+        _ = parser.parse() catch |err| switch (err) {
+            error.NotImplemented => return error.UnsupportedExpression,
+            else => return err,
+        };
     }
 
     fn evaluateNode(self: *Evaluator, node: *AstNode, t: u32) !f32 {
