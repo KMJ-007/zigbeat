@@ -81,6 +81,18 @@ pub const AudioSystem = struct {
            if (was_playing) rl.playAudioStream(self.stream);
        }
 
+       pub fn handleExpressionState(self: *AudioSystem, expression_valid: bool) void {
+           if (expression_valid) {
+               self.setMuted(false);
+           } else {
+               self.setMuted(true);
+           }
+
+           if (!self.isPlaying()) {
+               self.play();
+           }
+       }
+
     fn sampleRateToHz(rate: SampleRate) u32 {
         return switch (rate) {
             .rate_8000 => 8000,

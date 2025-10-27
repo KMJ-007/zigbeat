@@ -135,6 +135,33 @@ pub const Editor = struct {
         return self.error_message;
     }
 
+    pub fn handleExpressionUpdate(self: *Editor, evaluator: anytype, text: []const u8) bool {
+        if (text.len == 0) {
+            if (self.hasError()) {
+                self.clearError();
+            }
+            return false;
+        }
+
+        var expression_valid = true;
+        evaluator.setExpression(text) catch |err| {
+            expression_valid = false;
+            const message = switch (err) {
+                error.EmptyExpression => "Expression cannot be empty",
+                error.UnsupportedExpression => "Expression not supported yet",
+                error.OutOfMemory => "Out of memory while updating expression",
+                else => @errorName(err),
+            };
+            self.setError(message);
+        };
+
+        if (expression_valid and self.hasError()) {
+            self.clearError();
+        }
+
+        return expression_valid;
+    }
+
     pub fn getCursorVisible(self: *const Editor) bool {
         // Blink every 20 frames (like raylib example)
         return @mod(@divTrunc(self.frames_counter, 20), 2) == 0;

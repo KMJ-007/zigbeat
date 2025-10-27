@@ -71,41 +71,8 @@ pub fn main() !void {
         editor.handleInput(text_area.getCharsPerLine());
         if (editor.isDirty()) {
             const text = editor.getText();
-            if (text.len == 0) {
-                audio.setMuted(true);
-                if (!audio.isPlaying()) {
-                    audio.play();
-                }
-                if (editor.hasError()) {
-                    editor.clearError();
-                }
-            } else {
-                var sync_failed = false;
-                evaluator.setExpression(text) catch |err| {
-                    sync_failed = true;
-                    const message = switch (err) {
-                        error.EmptyExpression => "Expression cannot be empty",
-                        error.UnsupportedExpression => "Expression not supported yet",
-                        error.OutOfMemory => "Out of memory while updating expression",
-                        else => @errorName(err),
-                    };
-                    editor.setError(message);
-                };
-                if (!sync_failed) {
-                    if (editor.hasError()) {
-                        editor.clearError();
-                    }
-                    audio.setMuted(false);
-                    if (!audio.isPlaying()) {
-                        audio.play();
-                    }
-                } else {
-                    audio.setMuted(true);
-                    if (!audio.isPlaying()) {
-                        audio.play();
-                    }
-                }
-            }
+            const expression_valid = editor.handleExpressionUpdate(&evaluator, text);
+            audio.handleExpressionState(expression_valid);
             editor.markClean();
         }
 
