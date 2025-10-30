@@ -191,28 +191,28 @@ test "tokenizer: distinguishes single and double operators" {
     // & vs &&
     var tokenizer1 = Tokenizer.init("&");
     try std.testing.expectEqual(TokenType.bit_and, tokenizer1.next().type);
-    
+
     var tokenizer2 = Tokenizer.init("&&");
     try std.testing.expectEqual(TokenType.logical_and, tokenizer2.next().type);
-    
+
     // | vs ||
     var tokenizer3 = Tokenizer.init("|");
     try std.testing.expectEqual(TokenType.bit_or, tokenizer3.next().type);
-    
+
     var tokenizer4 = Tokenizer.init("||");
     try std.testing.expectEqual(TokenType.logical_or, tokenizer4.next().type);
-    
+
     // << and >>
     var tokenizer5 = Tokenizer.init("<<");
     try std.testing.expectEqual(TokenType.bit_shift_left, tokenizer5.next().type);
-    
+
     var tokenizer6 = Tokenizer.init(">>");
     try std.testing.expectEqual(TokenType.bit_shift_right, tokenizer6.next().type);
 }
 
 test "tokenizer: real bytebeat expression" {
     var tokenizer = Tokenizer.init("(t >> 10) * 42");
-    
+
     try std.testing.expectEqual(TokenType.lparen, tokenizer.next().type);
     try std.testing.expectEqual(TokenType.identifier, tokenizer.next().type);
     try std.testing.expectEqual(TokenType.bit_shift_right, tokenizer.next().type);
@@ -225,7 +225,7 @@ test "tokenizer: real bytebeat expression" {
 
 test "tokenizer: function with multiple args" {
     var tokenizer = Tokenizer.init("max(t, 5)");
-    
+
     try std.testing.expectEqualStrings("max", tokenizer.next().value);
     try std.testing.expectEqual(TokenType.lparen, tokenizer.next().type);
     try std.testing.expectEqualStrings("t", tokenizer.next().value);

@@ -18,11 +18,7 @@ pub fn main() !void {
 
     const expr = std.ArrayList(u8).empty;
 
-    var evaluator = try Evaluator.init(allocator, .{
-        .expression =  expr,
-        .beat_type = .bytebeat,
-        .sample_rate = .rate_8000
-    });
+    var evaluator = try Evaluator.init(allocator, .{ .expression = expr, .beat_type = .bytebeat, .sample_rate = .rate_8000 });
     defer evaluator.deinit();
     const initial_text = editor.getText();
     if (initial_text.len > 0) {
@@ -98,7 +94,7 @@ pub fn main() !void {
         const debug_text = std.fmt.bufPrintZ(
             &debug_buf,
             "Audio Samples: {d}",
-            .{ audio_samples},
+            .{audio_samples},
         ) catch unreachable;
         rl.drawText(debug_text, 20, window.height - 70, 14, rl.Color.green);
 

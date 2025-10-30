@@ -37,9 +37,9 @@ pub const AstNode = union(enum) {
 pub const Parser = struct {
     // going to use arena allocator so we can free it at the end
     allocator: std.heap.ArenaAllocator,
-    source: [] const u8,
+    source: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator,source: []const u8) Parser {
+    pub fn init(allocator: std.mem.Allocator, source: []const u8) Parser {
         return Parser{
             .allocator = std.heap.ArenaAllocator.init(allocator),
             .source = source,
@@ -51,7 +51,7 @@ pub const Parser = struct {
     }
 
     pub fn parse(self: *Parser) !*AstNode {
-        if(std.mem.eql(u8, self.source, "t")) {
+        if (std.mem.eql(u8, self.source, "t")) {
             const node = try self.allocator.allocator().create(AstNode);
             node.* = .variable;
             return node;
@@ -59,5 +59,4 @@ pub const Parser = struct {
 
         return error.NotImplemented;
     }
-
 };

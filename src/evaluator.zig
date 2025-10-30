@@ -54,7 +54,7 @@ pub const Evaluator = struct {
         const ast_root = try parser.parse();
 
         // Evaluate the AST
-        return try self.evaluateNode(ast_root,t);
+        return try self.evaluateNode(ast_root, t);
     }
 
     fn validateExpression(self: *Evaluator, expression: []const u8) !void {
@@ -67,7 +67,7 @@ pub const Evaluator = struct {
     }
 
     fn evaluateNode(self: *Evaluator, node: *AstNode, t: u32) !f32 {
-        _=self;
+        _ = self;
         return switch (node.*) {
             .variable => @floatFromInt(t),
             else => return error.NotImplemented,

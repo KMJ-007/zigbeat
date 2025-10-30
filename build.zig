@@ -109,7 +109,7 @@ pub fn build(b: *std.Build) !void {
 
     const run_evaluator_tests = b.addRunArtifact(evaluator_tests);
     const run_tokenizer_tests = b.addRunArtifact(tokenizer_tests);
-    
+
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_evaluator_tests.step);
     test_step.dependOn(&run_tokenizer_tests.step);
