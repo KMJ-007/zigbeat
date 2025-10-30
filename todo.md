@@ -1,10 +1,11 @@
 
-- [ ] make the basic parsing working
-- [ ] make the audio working
+- [x] make the basic parsing working
+- [ ] make the audio working on browser cause it has different sample rate
 - [ ] support the browser based encoded url state, so people can share things with each other
 - [ ] add support for example library from songs.json
 - [ ] add the support for visuals using project M
 - [ ] write a good readme
 - [ ] revamp the UI to make it look like retro synth vibe with texture and all that(need to think about maths operators, keyboard showing and hiding, visualisation graphics, way to add very long bytebeat program)
 - [ ] make it responsive for the web also, the experience should be really great for mobile users also
+- [ ] write detailed blog on bytebeat and zigbeat explaining what it is, why i ended up doing it, and it is fucking cool!
 - [ ] ship it!
