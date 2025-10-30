@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const tokenizer = @import("tokenizer.zig");
+
 pub const BinaryOp = enum {
     add, // +
     sub, // -

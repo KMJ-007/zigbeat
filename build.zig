@@ -87,8 +87,9 @@ pub fn build(b: *std.Build) !void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    const tests = b.addTest(.{
-        .name = "zigbeat_tests",
+    // Run tests for evaluator
+    const evaluator_tests = b.addTest(.{
+        .name = "evaluator_tests",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/evaluator.zig"),
             .target = target,
@@ -96,7 +97,20 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    const run_tests = b.addRunArtifact(tests);
+    // Run tests for tokenizer
+    const tokenizer_tests = b.addTest(.{
+        .name = "tokenizer_tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tokenizer.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    const run_evaluator_tests = b.addRunArtifact(evaluator_tests);
+    const run_tokenizer_tests = b.addRunArtifact(tokenizer_tests);
+    
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_tests.step);
+    test_step.dependOn(&run_evaluator_tests.step);
+    test_step.dependOn(&run_tokenizer_tests.step);
 }
