@@ -13,7 +13,7 @@ pub fn main() !void {
     // Initialize editor
     var editor = try Editor.init(allocator);
     defer editor.deinit();
-    try editor.setText("");
+    try editor.setText("t*(42&t>>10)");
     editor.markClean();
 
     const expr = std.ArrayList(u8).empty;

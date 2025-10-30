@@ -15,7 +15,7 @@ pub const SampleRate = enum { rate_8000, rate_11000, rate_22000, rate_32000, rat
 pub const EvaluatorConfig = struct {
     beat_type: BeatType = .bytebeat,
     expression_type: ExpressionType = .infix,
-    sample_rate: SampleRate = .rate_8000,
+    sample_rate: SampleRate = .rate_48000,
     expression: std.ArrayList(u8),
 };
 
