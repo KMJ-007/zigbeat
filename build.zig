@@ -107,7 +107,6 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-
     // Run tests for tokenizer
     const tokenizer_tests = b.addTest(.{
         .name = "tokenizer_tests",

@@ -148,7 +148,6 @@ pub const Editor = struct {
             expression_valid = false;
             const message = switch (err) {
                 error.EmptyExpression => "Expression cannot be empty",
-                error.UnsupportedExpression => "Expression not supported yet",
                 error.OutOfMemory => "Out of memory while updating expression",
                 else => @errorName(err),
             };

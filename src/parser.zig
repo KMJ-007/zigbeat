@@ -18,7 +18,7 @@ pub const BinaryOp = enum {
     logical_or, // ||
 };
 
-pub const FunctionType = enum { abs, sqrt, round, log, exp, sin, cos, tan, floor, ceil, min, max, pow };
+pub const FunctionType = enum { abs, sqrt, round, log, exp, sin, cos, tan, floor, ceil, min, max };
 
 pub const AstNode = union(enum) {
     number: f32,
@@ -130,37 +130,37 @@ pub const Parser = struct {
         }
 
         // consume '('
+        self.advance();
+        
         const func_type = try parseFunctionName(name_token.value);
 
         // parse arguments
         var args = std.ArrayList(*AstNode).empty;
 
         // empty arg
-        if(self.current_token.type == .rparen){
+        if (self.current_token.type == .rparen) {
             return error.FunctionNeedsArguments;
         }
 
         try args.append(self.allocator.allocator(), try self.parseExpression(0));
 
         // parse remaining args
-        while(self.current_token.type == .comma) {
+        while (self.current_token.type == .comma) {
             self.advance(); // consume ','
             try args.append(self.allocator.allocator(), try self.parseExpression(0));
         }
 
-        if(self.current_token.type != .rparen){
+        if (self.current_token.type != .rparen) {
             return error.ExpectedClosingParen;
         }
         self.advance(); // consume ')'
 
         // node node function node
         const node = try self.allocator.allocator().create(AstNode);
-        node.* = AstNode{
-            .function = .{
-                .name = func_type,
-                .args = try args.toOwnedSlice(self.allocator.allocator()),
-            }
-        };
+        node.* = AstNode{ .function = .{
+            .name = func_type,
+            .args = try args.toOwnedSlice(self.allocator.allocator()),
+        } };
         return node;
     }
 
@@ -169,7 +169,7 @@ pub const Parser = struct {
     }
 };
 fn parseFunctionName(name: []const u8) !FunctionType {
-    const map = std.StaticStringMap(FunctionType).initComptime( .{
+    const map = std.StaticStringMap(FunctionType).initComptime(.{
         .{ "abs", .abs },
         .{ "sqrt", .sqrt },
         .{ "round", .round },
@@ -182,7 +182,6 @@ fn parseFunctionName(name: []const u8) !FunctionType {
         .{ "ceil", .ceil },
         .{ "min", .min },
         .{ "max", .max },
-        .{ "pow", .pow },
     });
 
     return map.get(name) orelse error.UnknownFunction;
