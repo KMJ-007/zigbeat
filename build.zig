@@ -97,6 +97,17 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
+    // Run tests for parser
+    const parser_tests = b.addTest(.{
+        .name = "parser_tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/parser.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+
     // Run tests for tokenizer
     const tokenizer_tests = b.addTest(.{
         .name = "tokenizer_tests",
@@ -109,8 +120,10 @@ pub fn build(b: *std.Build) !void {
 
     const run_evaluator_tests = b.addRunArtifact(evaluator_tests);
     const run_tokenizer_tests = b.addRunArtifact(tokenizer_tests);
+    const run_parser_tests = b.addRunArtifact(parser_tests);
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_evaluator_tests.step);
     test_step.dependOn(&run_tokenizer_tests.step);
+    test_step.dependOn(&run_parser_tests.step);
 }

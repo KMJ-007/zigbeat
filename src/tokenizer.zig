@@ -1,4 +1,5 @@
 const std = @import("std");
+const BinaryOp = @import("parser.zig").BinaryOp;
 
 const TokenType = union(enum) {
     number,
@@ -22,9 +23,44 @@ const TokenType = union(enum) {
     eof,
 };
 
-const Token = struct { type: TokenType, value: []const u8 };
+pub const Token = struct {
+    type: TokenType,
+    value: []const u8,
+    pub fn precedence(self: Token) ?struct { l_bp: u8, r_bp: u8 } {
+        const bp: u8 = switch (self.type) {
+            .logical_or => 1,
+            .logical_and => 2,
+            .bit_or => 3,
+            .bit_xor => 4,
+            .bit_and => 5,
+            .bit_shift_left, .bit_shift_right => 6,
+            .add, .sub => 7,
+            .mul, .div, .mod => 8,
+            else => return null,
+        };
+        return .{ .l_bp = bp, .r_bp = bp + 1 };
+    }
 
-const Tokenizer = struct {
+    pub fn toBinaryOp(self: Token) !BinaryOp {
+        return switch (self.type) {
+            .add => .add,
+            .sub => .sub,
+            .mul => .mul,
+            .div => .div,
+            .mod => .mod,
+            .bit_and => .bit_and,
+            .bit_or => .bit_or,
+            .bit_xor => .bit_xor,
+            .bit_shift_left => .bit_shift_left,
+            .bit_shift_right => .bit_shift_right,
+            .logical_and => .logical_and,
+            .logical_or => .logical_or,
+            else => error.NotAnOperator,
+        };
+    }
+};
+
+pub const Tokenizer = struct {
     source: []const u8,
     pos: usize,
 
@@ -32,7 +68,7 @@ const Tokenizer = struct {
         return Tokenizer{ .source = source, .pos = 0 };
     }
 
-    fn next(self: *Tokenizer) Token {
+    pub fn next(self: *Tokenizer) Token {
         self.skipWhitespace();
 
         const start = self.pos;
@@ -139,7 +175,7 @@ const Tokenizer = struct {
         }
     }
 
-    fn peek(self: *const Tokenizer) ?u8 {
+    pub fn peek(self: *const Tokenizer) ?u8 {
         if (self.pos + 1 >= self.source.len) return null;
         return self.source[self.pos + 1];
     }
