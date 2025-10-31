@@ -34,10 +34,44 @@
 			image-rendering: pixelated;
 			-ms-interpolation-mode: nearest-neighbor;
 		}
+
+		#start-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(0, 0, 0, 0.95);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			color: #00ff00;
+			font-family: monospace;
+			font-size: 24px;
+			cursor: pointer;
+			z-index: 1000;
+			transition: opacity 0.3s ease;
+		}
+
+		#start-overlay.hidden {
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		#start-overlay p {
+			margin: 10px 0;
+			text-align: center;
+		}
+
+		#start-overlay .subtitle {
+			font-size: 16px;
+			color: #888;
+		}
 	</style>
 </head>
 
 <body>
+	<div id="start-overlay">
+		<p>Play</p>
+	</div>
 	<canvas  id="canvas" oncontextmenu="event.preventDefault()"></canvas>
 	<script type='text/javascript'>
 		var Module = {
@@ -66,6 +100,51 @@
 	</script>
 	<script>
 		window.va = window.va || function () {(window.vaq = window.vaq || []).push(arguments);};
+	</script>
+	<script>
+		// Resume AudioContext on first user interaction
+		var audioStarted = false;
+
+		function resumeAudio() {
+			if (audioStarted) return;
+			audioStarted = true;
+
+			console.log('User interaction detected, resuming audio...');
+
+			// Hide overlay with fade effect
+			var overlay = document.getElementById('start-overlay');
+			overlay.classList.add('hidden');
+
+			// Remove overlay from DOM after transition
+			setTimeout(function() {
+				if (overlay.parentNode) {
+					overlay.parentNode.removeChild(overlay);
+				}
+			}, 300);
+
+			// Resume any suspended AudioContexts (used by Emscripten/miniaudio)
+			if (window.miniaudio && window.miniaudio.devices) {
+				window.miniaudio.devices.forEach(function(device) {
+					if (device.webaudio && device.webaudio.state === 'suspended') {
+						device.webaudio.resume().then(function() {
+							console.log('AudioContext resumed successfully');
+						}).catch(function(err) {
+							console.error('Failed to resume AudioContext:', err);
+						});
+					}
+				});
+			}
+		}
+
+		// Listen for any user interaction (once)
+		document.addEventListener('click', resumeAudio, { once: true });
+		document.addEventListener('keydown', resumeAudio, { once: true });
+		document.addEventListener('touchstart', resumeAudio, { once: true });
+
+		// Also add to Module.postRun to ensure it works after WASM loads
+		Module.postRun.push(function() {
+			console.log('Module loaded, waiting for user interaction to start audio');
+		});
 	</script>
 	{{{ SCRIPT }}}
 </body>

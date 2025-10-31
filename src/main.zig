@@ -33,7 +33,6 @@ pub fn main() !void {
     defer audio.deinit();
 
     audio.activate();
-    audio.setMuted(true);
     audio.play();
 
     // Initialize window
