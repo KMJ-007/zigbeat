@@ -144,6 +144,70 @@
 		// Also add to Module.postRun to ensure it works after WASM loads
 		Module.postRun.push(function() {
 			console.log('Module loaded, waiting for user interaction to start audio');
+
+			// Add audio debugging after a short delay to ensure miniaudio is initialized
+			setTimeout(function() {
+				if (window.miniaudio && window.miniaudio.devices && window.miniaudio.devices.length > 0) {
+					var device = window.miniaudio.devices[0];
+					if (device.scriptNode) {
+						console.log('=== Audio Debug Info ===');
+						console.log('Buffer size:', device.scriptNode.bufferSize);
+						console.log('Sample rate:', device.webaudio.sampleRate);
+						console.log('Channels:', device.scriptNode.channelCount);
+
+						// Wrap the original onaudioprocess to log buffer data
+						var originalCallback = device.scriptNode.onaudioprocess;
+						var callCount = 0;
+
+						device.scriptNode.onaudioprocess = function(e) {
+							// Measure callback performance
+							var startTime = performance.now();
+
+							// Call original callback first
+							originalCallback.call(this, e);
+
+							var endTime = performance.now();
+							var callbackDuration = endTime - startTime;
+
+							// Log first few callbacks for debugging
+							if (callCount < 5) {
+								console.log('Callback took:', callbackDuration.toFixed(3), 'ms');
+								callCount++;
+								console.log('=== Audio Callback #' + callCount + ' ===');
+
+								// Check output buffer
+								var leftChannel = e.outputBuffer.getChannelData(0);
+								var rightChannel = e.outputBuffer.getChannelData(1);
+
+								// Log first 10 samples
+								console.log('First 10 LEFT samples:', Array.from(leftChannel.slice(0, 10)));
+								console.log('First 10 RIGHT samples:', Array.from(rightChannel.slice(0, 10)));
+
+								// Check for NaN or Infinity
+								var hasNaN = false;
+								var hasInf = false;
+								for (var i = 0; i < leftChannel.length; i++) {
+									if (isNaN(leftChannel[i]) || isNaN(rightChannel[i])) hasNaN = true;
+									if (!isFinite(leftChannel[i]) || !isFinite(rightChannel[i])) hasInf = true;
+								}
+
+								if (hasNaN) console.error('WARNING: Buffer contains NaN values!');
+								if (hasInf) console.error('WARNING: Buffer contains Infinity values!');
+
+								// Calculate min/max/avg
+								var min = Math.min(...leftChannel);
+								var max = Math.max(...leftChannel);
+								var sum = leftChannel.reduce((a, b) => a + b, 0);
+								var avg = sum / leftChannel.length;
+
+								console.log('Buffer stats - Min:', min, 'Max:', max, 'Avg:', avg);
+							}
+						};
+
+						console.log('Audio debugging enabled - check console during playback');
+					}
+				}
+			}, 1000);
 		});
 	</script>
 	{{{ SCRIPT }}}

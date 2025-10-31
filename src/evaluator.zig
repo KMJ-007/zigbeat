@@ -22,19 +22,31 @@ pub const EvaluatorConfig = struct {
 pub const Evaluator = struct {
     config: EvaluatorConfig,
     allocator: std.mem.Allocator,
+    ast_arena: std.heap.ArenaAllocator,
+    cached_ast: ?*AstNode,
 
     pub fn init(allocator: std.mem.Allocator, config: EvaluatorConfig) !Evaluator {
-        return Evaluator{ .config = config, .allocator = allocator };
+        return Evaluator{
+            .config = config,
+            .allocator = allocator,
+            .ast_arena = std.heap.ArenaAllocator.init(allocator),
+            .cached_ast = null,
+        };
     }
 
     pub fn setExpression(self: *Evaluator, expression: []const u8) !void {
         if (expression.len == 0) return error.EmptyExpression;
-        try self.validateExpression(expression);
+
+        _ = self.ast_arena.reset(.retain_capacity);
+        var parser = Parser.init(self.ast_arena.allocator(), expression);
+        self.cached_ast = try parser.parse();
+
         self.config.expression.clearRetainingCapacity();
         try self.config.expression.appendSlice(self.allocator, expression);
     }
 
     pub fn deinit(self: *Evaluator) void {
+        self.ast_arena.deinit();
         self.config.expression.deinit(self.allocator);
     }
 
@@ -47,20 +59,10 @@ pub const Evaluator = struct {
     }
 
     pub fn evaluate(self: *Evaluator, t: u32) !f32 {
-        // parse the expression into AST
-        var parser = Parser.init(self.allocator, self.config.expression.items);
-        defer parser.deinit();
-
-        const ast_root = try parser.parse();
-
-        // Evaluate the AST
-        return try self.evaluateNode(ast_root, t);
-    }
-
-    fn validateExpression(self: *Evaluator, expression: []const u8) !void {
-        var parser = Parser.init(self.allocator, expression);
-        defer parser.deinit();
-        _ = try parser.parse();
+        if (self.cached_ast) |ast| {
+            return try self.evaluateNode(ast, t);
+        }
+        return error.NoExpression;
     }
 
     fn evaluateNode(self: *Evaluator, node: *AstNode, t: u32) !f32 {
@@ -108,30 +110,30 @@ pub const Evaluator = struct {
                     .logical_or => if (left != 0.0 or right != 0.0) 1.0 else 0.0,
                 };
             },
-            .function => |func|{
-              // evaluate args first
-              var arg_vals = try self.allocator.alloc(f32, func.args.len);
-              defer self.allocator.free(arg_vals);
+            .function => |func| {
+                // evaluate args first
+                var arg_vals = try self.allocator.alloc(f32, func.args.len);
+                defer self.allocator.free(arg_vals);
 
-              for(func.args, 0..) |arg, i|{
-                  arg_vals[i] = try self.evaluateNode(arg, t);
-              }
+                for (func.args, 0..) |arg, i| {
+                    arg_vals[i] = try self.evaluateNode(arg, t);
+                }
 
-              // now apply the function
-              return switch (func.name) {
-                .sin => @sin(arg_vals[0]),
-              .cos=> @cos(arg_vals[0]),
-              .abs=> @abs(arg_vals[0]),
-              .sqrt=> if(arg_vals[0]<0) 0.0 else @sqrt(arg_vals[0]),
-              .round=> @round(arg_vals[0]),
-              .log=> @log(arg_vals[0]),
-              .exp=> @exp(arg_vals[0]),
-              .tan=> @tan(arg_vals[0]),
-              .floor=> @floor(arg_vals[0]),
-              .ceil=> @ceil(arg_vals[0]),
-              .min=> @min(arg_vals[0], arg_vals[1]),
-              .max=> @max(arg_vals[0], arg_vals[1]),
-              };
+                // now apply the function
+                return switch (func.name) {
+                    .sin => @sin(arg_vals[0]),
+                    .cos => @cos(arg_vals[0]),
+                    .abs => @abs(arg_vals[0]),
+                    .sqrt => if (arg_vals[0] < 0) 0.0 else @sqrt(arg_vals[0]),
+                    .round => @round(arg_vals[0]),
+                    .log => @log(arg_vals[0]),
+                    .exp => @exp(arg_vals[0]),
+                    .tan => @tan(arg_vals[0]),
+                    .floor => @floor(arg_vals[0]),
+                    .ceil => @ceil(arg_vals[0]),
+                    .min => @min(arg_vals[0], arg_vals[1]),
+                    .max => @max(arg_vals[0], arg_vals[1]),
+                };
             },
         };
     }

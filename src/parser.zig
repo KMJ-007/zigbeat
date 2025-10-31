@@ -35,8 +35,7 @@ pub const AstNode = union(enum) {
 };
 
 pub const Parser = struct {
-    // going to use arena allocator so we can free it at the end
-    allocator: std.heap.ArenaAllocator,
+    allocator: std.mem.Allocator,
     tokenizer: Tokenizer.Tokenizer,
     current_token: Tokenizer.Token,
 
@@ -44,14 +43,10 @@ pub const Parser = struct {
         var tokenizer = Tokenizer.Tokenizer.init(source);
         const first_token = tokenizer.next();
         return Parser{
-            .allocator = std.heap.ArenaAllocator.init(allocator),
+            .allocator = allocator,
             .tokenizer = tokenizer,
             .current_token = first_token,
         };
-    }
-
-    pub fn deinit(self: *Parser) void {
-        self.allocator.deinit();
     }
 
     pub fn parse(self: *Parser) !*AstNode {
@@ -72,7 +67,7 @@ pub const Parser = struct {
             // parse right side with higher binding power
             const rhs = try self.parseExpression(bp.r_bp);
 
-            const node = try self.allocator.allocator().create(AstNode);
+            const node = try self.allocator.create(AstNode);
             node.* = AstNode{ .binary_op = .{ .left = lhs, .right = rhs, .op = op } };
             lhs = node;
         }
@@ -86,7 +81,7 @@ pub const Parser = struct {
             .number => {
                 self.advance();
                 const value = try std.fmt.parseFloat(f32, token.value);
-                const node = try self.allocator.allocator().create(AstNode);
+                const node = try self.allocator.create(AstNode);
                 node.* = AstNode{ .number = value };
                 return node;
             },
@@ -94,7 +89,7 @@ pub const Parser = struct {
                 // check if it's the variable 't'
                 if (std.mem.eql(u8, token.value, "t")) {
                     self.advance();
-                    const node = try self.allocator.allocator().create(AstNode);
+                    const node = try self.allocator.create(AstNode);
                     node.* = .variable;
                     return node;
                 } else {
@@ -131,7 +126,7 @@ pub const Parser = struct {
 
         // consume '('
         self.advance();
-        
+
         const func_type = try parseFunctionName(name_token.value);
 
         // parse arguments
@@ -142,12 +137,12 @@ pub const Parser = struct {
             return error.FunctionNeedsArguments;
         }
 
-        try args.append(self.allocator.allocator(), try self.parseExpression(0));
+        try args.append(self.allocator, try self.parseExpression(0));
 
         // parse remaining args
         while (self.current_token.type == .comma) {
             self.advance(); // consume ','
-            try args.append(self.allocator.allocator(), try self.parseExpression(0));
+            try args.append(self.allocator, try self.parseExpression(0));
         }
 
         if (self.current_token.type != .rparen) {
@@ -156,10 +151,10 @@ pub const Parser = struct {
         self.advance(); // consume ')'
 
         // node node function node
-        const node = try self.allocator.allocator().create(AstNode);
+        const node = try self.allocator.create(AstNode);
         node.* = AstNode{ .function = .{
             .name = func_type,
-            .args = try args.toOwnedSlice(self.allocator.allocator()),
+            .args = try args.toOwnedSlice(self.allocator),
         } };
         return node;
     }
@@ -190,7 +185,6 @@ fn parseFunctionName(name: []const u8) !FunctionType {
 test "parser: simple number" {
     const allocator = std.testing.allocator;
     var parser = Parser.init(allocator, "42");
-    defer parser.deinit();
 
     const ast = try parser.parse();
     try std.testing.expectEqual(@as(f32, 42.0), ast.number);
@@ -199,7 +193,6 @@ test "parser: simple number" {
 test "parser: variable t" {
     const allocator = std.testing.allocator;
     var parser = Parser.init(allocator, "t");
-    defer parser.deinit();
 
     const ast = try parser.parse();
     try std.testing.expect(ast.* == .variable);
@@ -208,7 +201,6 @@ test "parser: variable t" {
 test "parser: simple addition" {
     const allocator = std.testing.allocator;
     var parser = Parser.init(allocator, "t + 5");
-    defer parser.deinit();
 
     const ast = try parser.parse();
     try std.testing.expect(ast.* == .binary_op);
@@ -218,10 +210,8 @@ test "parser: simple addition" {
 test "parser: precedence test" {
     const allocator = std.testing.allocator;
     var parser = Parser.init(allocator, "2 + 3 * 4");
-    defer parser.deinit();
 
     const ast = try parser.parse();
-    // Should parse as: 2 + (3 * 4)
     try std.testing.expectEqual(BinaryOp.add, ast.binary_op.op);
     try std.testing.expectEqual(@as(f32, 2.0), ast.binary_op.left.number);
     try std.testing.expectEqual(BinaryOp.mul, ast.binary_op.right.binary_op.op);
@@ -230,7 +220,6 @@ test "parser: precedence test" {
 test "parser: bytebeat expression" {
     const allocator = std.testing.allocator;
     var parser = Parser.init(allocator, "(t >> 10) * 42");
-    defer parser.deinit();
 
     const ast = try parser.parse();
     try std.testing.expectEqual(BinaryOp.mul, ast.binary_op.op);
