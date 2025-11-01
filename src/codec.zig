@@ -2,7 +2,9 @@ const std = @import("std");
 
 /// Decode a hex-encoded bb parameter into UTF-8 text
 pub fn decodeBb(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
-    if (hex.len == 0) return error.EmptyInput;
+    if (hex.len == 0) {
+        return try allocator.dupe(u8, "");
+    }
 
     if (hex.len % 2 != 0) return error.InvalidHexLength;
 
@@ -21,7 +23,9 @@ pub fn decodeBb(allocator: std.mem.Allocator, hex: []const u8) ![]u8 {
 
 /// Encode UTF-8 text into hex format for bb parameter
 pub fn encodeBb(allocator: std.mem.Allocator, text: []const u8) ![]u8 {
-    if (text.len == 0) return error.EmptyInput;
+    if (text.len == 0) {
+        return try allocator.dupe(u8, "");
+    }
 
     if (!std.unicode.utf8ValidateSlice(text)) {
         return error.InvalidUtf8;

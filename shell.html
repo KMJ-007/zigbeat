@@ -103,25 +103,25 @@
 	</script>
 	<script>
 		// ============= URL State Management =============
-		
+
 		// Parse URL hash parameters (e.g., #bb=...)
 		function getUrlParams() {
 			var params = {};
 			var hash = window.location.hash.substring(1); // Remove '#'
-			
+
 			if (hash) {
 				var pairs = hash.split('&');
 				for (var i = 0; i < pairs.length; i++) {
 					var pair = pairs[i].split('=');
 					if (pair.length === 2) {
-						params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+						params[decodeURIComponent(pair[0])] = pair[1];
 					}
 				}
 			}
-			
+
 			return params;
 		}
-		
+
 		// Get bb parameter from URL
 		function getBbFromUrl() {
 			try {
@@ -141,7 +141,7 @@
 				return null;
 			}
 		}
-		
+
 		// Update URL hash with bb parameter (without page reload)
 		function updateUrlWithBb(hexString) {
 			try {
@@ -156,14 +156,14 @@
 				console.error('updateUrlWithBb: Error updating URL:', e);
 			}
 		}
-		
+
 		// Export functions for Zig to call
 		window.zigbeat = window.zigbeat || {};
 		window.zigbeat.getBbFromUrl = getBbFromUrl;
 		window.zigbeat.updateUrlWithBb = updateUrlWithBb;
-		
+
 		// ============= Audio Management =============
-		
+
 		// Resume AudioContext on first user interaction
 		var audioStarted = false;
 

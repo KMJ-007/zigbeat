@@ -24,11 +24,9 @@ pub fn getBbFromUrl(allocator: std.mem.Allocator) !?[]u8 {
     const hex_str = try allocator.dupe(u8, hex_str_temp);
     defer allocator.free(hex_str);
 
-    std.debug.print("URL bb parameter (hex): {s}\n", .{hex_str});
-
     // Decode the hex string to get the expression text
     const decoded = codec.decodeBb(allocator, hex_str) catch |err| {
-        std.debug.print("Failed to decode bb parameter: {} (hex: {s})\n", .{ err, hex_str });
+        std.debug.print("Failed to decode bb parameter from URL: {}\n", .{err});
         return null;
     };
 
@@ -55,16 +53,20 @@ pub fn updateUrlWithExpression(allocator: std.mem.Allocator, text: []const u8) v
     };
     defer allocator.free(encoded);
 
-    // Create null-terminated string for JavaScript
-    var js_call_buf: [4096]u8 = undefined;
-    const js_call = std.fmt.bufPrintZ(
-        &js_call_buf,
-        "window.zigbeat.updateUrlWithBb('{s}')",
-        .{encoded},
-    ) catch {
-        std.debug.print("Expression too long for URL encoding\n", .{});
+    const wrapper_len = "window.zigbeat.updateUrlWithBb('')".len;
+    const total_len = wrapper_len + encoded.len + 1;
+
+    const js_call = allocator.allocSentinel(u8, total_len - 1, 0) catch {
+        std.debug.print("Out of memory encoding URL\n", .{});
         return;
     };
+    defer allocator.free(js_call);
+
+    _ = std.fmt.bufPrint(
+        js_call,
+        "window.zigbeat.updateUrlWithBb('{s}')",
+        .{encoded},
+    ) catch return;
 
     _ = emscripten_run_script_string(js_call);
 }
