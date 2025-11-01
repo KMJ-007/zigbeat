@@ -6,6 +6,7 @@ const Window = @import("window.zig").Window;
 const customAllocator = @import("allocator.zig").CustomAllocator;
 const AudioSystem = @import("audio.zig").AudioSystem;
 const Evaluator = @import("evaluator.zig").Evaluator;
+const url_state = @import("url_state.zig");
 
 pub fn main() !void {
     var gpa = customAllocator{};
@@ -13,16 +14,43 @@ pub fn main() !void {
     // Initialize editor
     var editor = try Editor.init(allocator);
     defer editor.deinit();
-    try editor.setText("t*(42&t>>10)");
+
+    // Try to load expression from URL, otherwise use default
+    const default_expr = "t*(42&t>>10)";
+    var loaded_from_url = false;
+
+    if (try url_state.getBbFromUrl(allocator)) |url_expression| {
+        defer allocator.free(url_expression);
+        std.debug.print("Loading expression from URL: {s}\n", .{url_expression});
+        try editor.setText(url_expression);
+        loaded_from_url = true;
+    } else {
+        // Default expression
+        try editor.setText(default_expr);
+    }
     editor.markClean();
 
     const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{ .expression = expr, .beat_type = .bytebeat, .sample_rate = .rate_8000 });
     defer evaluator.deinit();
+
     const initial_text = editor.getText();
     if (initial_text.len > 0) {
-        try evaluator.setExpression(initial_text);
+        evaluator.setExpression(initial_text) catch |err| {
+            std.debug.print("Invalid expression: {}\n", .{err});
+            const error_msg = switch (err) {
+                error.EmptyExpression => "Expression cannot be empty",
+                error.OutOfMemory => "Out of memory",
+                else => @errorName(err),
+            };
+            editor.setError(error_msg);
+        };
+    }
+
+    // Update URL with current valid expression
+    if (!loaded_from_url) {
+        url_state.updateUrlWithExpression(allocator, editor.getText());
     }
 
     // Intialize Audio
@@ -68,6 +96,10 @@ pub fn main() !void {
             const text = editor.getText();
             const expression_valid = editor.handleExpressionUpdate(&evaluator, text);
             audio.handleExpressionState(expression_valid);
+
+            // Update URL with current expression
+            url_state.updateUrlWithExpression(allocator, text);
+
             editor.markClean();
         }
 

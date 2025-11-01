@@ -102,6 +102,68 @@
 		window.va = window.va || function () {(window.vaq = window.vaq || []).push(arguments);};
 	</script>
 	<script>
+		// ============= URL State Management =============
+		
+		// Parse URL hash parameters (e.g., #bb=...)
+		function getUrlParams() {
+			var params = {};
+			var hash = window.location.hash.substring(1); // Remove '#'
+			
+			if (hash) {
+				var pairs = hash.split('&');
+				for (var i = 0; i < pairs.length; i++) {
+					var pair = pairs[i].split('=');
+					if (pair.length === 2) {
+						params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+					}
+				}
+			}
+			
+			return params;
+		}
+		
+		// Get bb parameter from URL
+		function getBbFromUrl() {
+			try {
+				var params = getUrlParams();
+				var bb = params.bb || null;
+				if (bb) {
+					console.log('getBbFromUrl: Found bb parameter:', bb);
+					// Validate it's a valid hex string (only 0-9, a-f, A-F)
+					if (!/^[0-9a-fA-F]*$/.test(bb)) {
+						console.warn('getBbFromUrl: Invalid hex string, ignoring');
+						return null;
+					}
+				}
+				return bb;
+			} catch (e) {
+				console.error('getBbFromUrl: Error parsing URL:', e);
+				return null;
+			}
+		}
+		
+		// Update URL hash with bb parameter (without page reload)
+		function updateUrlWithBb(hexString) {
+			try {
+				if (!hexString) {
+					// Clear bb parameter if empty
+					window.history.replaceState(null, '', window.location.pathname);
+				} else {
+					// Don't encode hex string - it's already safe for URLs
+					window.history.replaceState(null, '', '#bb=' + hexString);
+				}
+			} catch (e) {
+				console.error('updateUrlWithBb: Error updating URL:', e);
+			}
+		}
+		
+		// Export functions for Zig to call
+		window.zigbeat = window.zigbeat || {};
+		window.zigbeat.getBbFromUrl = getBbFromUrl;
+		window.zigbeat.updateUrlWithBb = updateUrlWithBb;
+		
+		// ============= Audio Management =============
+		
 		// Resume AudioContext on first user interaction
 		var audioStarted = false;
 

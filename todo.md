@@ -1,7 +1,7 @@
 
 - [x] make the basic parsing working
-- [ ] make the audio working on browser cause it has different sample rate
-- [ ] support the browser based encoded url state, so people can share things with each other
+- [x] make the audio working on browser cause it has different sample rate
+- [x] support the browser based encoded url state, so people can share things with each other
 - [ ] add support for example library from songs.json
 - [ ] add the support for visuals using project M
 - [ ] write a good readme
