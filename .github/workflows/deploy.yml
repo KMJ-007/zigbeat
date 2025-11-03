@@ -1,26 +1,29 @@
 name: Build and Deploy Web Bundle
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: pages
   cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Cache Zig/Emscripten
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/zig
+            /home/runner/.cache/zig
+          key: zig-raylib-emsdk-${{ hashFiles('build.zig.zon', 'build.zig') }}-${{ runner.os }}-${{ hashFiles('**/*.zig') }}
 
       - name: Set up Zig
         uses: goto-bus-stop/setup-zig@v2
@@ -31,26 +34,39 @@ jobs:
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: 4.0.3
-          actions-cache: false
 
-      - name: Activate Emscripten
+      - name: Activate Emscripten Environment (for raylib_zig)
         run: |
-            echo "Sourcing emsdk_env.sh from $EMSDK"
-            source "$EMSDK/emsdk_env.sh"
-            echo "EMSDK=$EMSDK" >> $GITHUB_ENV
-            echo "$EMSDK" >> $GITHUB_PATH
-            echo "$EMSDK/upstream/emscripten" >> $GITHUB_PATH
+          # Find and source Zig-fetched emsdk_env.sh (primary for raylib_zig dep)
+          EMSK_PATH=$(find ~/.cache/zig -name emsdk_env.sh -type f | head -1)
+          if [ -z "$EMSK_PATH" ]; then
+            # Fallback to action's install
+            EMSK_PATH="$EMSDK/emsdk_env.sh"
+          fi
+          echo "Sourcing emsdk_env.sh from: $EMSK_PATH"
+          source "$EMSK_PATH"
+          # Persist for steps (rlz.emsdk needs EM_CONFIG, PATH for emcc)
+          echo "EM_CONFIG=$(emcc --print-json-target-library-root 2>/dev/null | jq -r .sysroot 2>/dev/null || echo $EMSDK/upstream/emscripten/cache/sysroot)" >> $GITHUB_ENV
+          echo "$PATH" >> $GITHUB_ENV  # Full PATH with emcc
+          echo "$EMSDK/upstream/emscripten" >> $GITHUB_PATH
+          echo "$EMSDK" >> $GITHUB_PATH
 
-      - name: Fetch package dependencies
+      - name: Verify Tools
+        run: |
+          zig version
+          which emcc || echo "emcc not found"
+          emcc --version  # Expect: emcc (Emscripten ...) 4.0.3
+
+      - name: Fetch Dependencies
         run: zig build --fetch
 
-      - name: Run unit tests
+      - name: Run Unit Tests
         run: zig build test
 
-      - name: Build web bundle
-        run: zig build web
+      - name: Build Web Bundle
+        run: zig build web -Doptimize=ReleaseSmall
 
-      - name: Upload web artifact
+      - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: zig-out/web
@@ -63,6 +79,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deploy
         uses: actions/deploy-pages@v4
