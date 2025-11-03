@@ -3,13 +3,16 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 concurrency:
   group: pages
   cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,8 +25,9 @@ jobs:
         with:
           path: |
             ~/.cache/zig
-            /home/runner/.cache/zig
-          key: zig-raylib-emsdk-${{ hashFiles('build.zig.zon', 'build.zig') }}-${{ runner.os }}-${{ hashFiles('**/*.zig') }}
+            ${{ runner.temp }}/emsdk-main  # Matches setup-emsdk's temp dir
+          key: zig-raylib-emsdk-4.0.3-${{ hashFiles('build.zig.zon', 'build.zig') }}-${{ runner.os }}
+          restore-keys: zig-raylib-emsdk-4.0.3-${{ runner.os }}
 
       - name: Set up Zig
         uses: goto-bus-stop/setup-zig@v2
@@ -35,27 +39,10 @@ jobs:
         with:
           version: 4.0.3
 
-      - name: Activate Emscripten Environment (for raylib_zig)
-        run: |
-          # Find and source Zig-fetched emsdk_env.sh (primary for raylib_zig dep)
-          EMSK_PATH=$(find ~/.cache/zig -name emsdk_env.sh -type f | head -1)
-          if [ -z "$EMSK_PATH" ]; then
-            # Fallback to action's install
-            EMSK_PATH="$EMSDK/emsdk_env.sh"
-          fi
-          echo "Sourcing emsdk_env.sh from: $EMSK_PATH"
-          source "$EMSK_PATH"
-          # Persist for steps (rlz.emsdk needs EM_CONFIG, PATH for emcc)
-          echo "EM_CONFIG=$(emcc --print-json-target-library-root 2>/dev/null | jq -r .sysroot 2>/dev/null || echo $EMSDK/upstream/emscripten/cache/sysroot)" >> $GITHUB_ENV
-          echo "$PATH" >> $GITHUB_ENV  # Full PATH with emcc
-          echo "$EMSDK/upstream/emscripten" >> $GITHUB_PATH
-          echo "$EMSDK" >> $GITHUB_PATH
-
       - name: Verify Tools
         run: |
           zig version
-          which emcc || echo "emcc not found"
-          emcc --version  # Expect: emcc (Emscripten ...) 4.0.3
+          emcc --version  # Now persists: Expect 4.0.3
 
       - name: Fetch Dependencies
         run: zig build --fetch
@@ -64,7 +51,16 @@ jobs:
         run: zig build test
 
       - name: Build Web Bundle
-        run: zig build web -Doptimize=ReleaseSmall
+        run: |
+          EMSDK_FETCHED=$(find ~/.cache/zig -name "emsdk_env.sh" -path "*/upstream/emscripten" | sed 's|/upstream/emscripten||')
+          if [ -n "$EMSDK_FETCHED" ]; then
+            SYSROOT="$EMSDK_FETCHED/upstream/emscripten"
+          else
+            # Fallback to action's install
+            SYSROOT="$EMSDK/upstream/emscripten"
+          fi
+          echo "Using sysroot: $SYSROOT"
+          zig build web --sysroot "$SYSROOT"
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
