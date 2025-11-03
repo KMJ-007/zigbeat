@@ -1,0 +1,57 @@
+name: Build and Deploy Web Bundle
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.1
+
+      - name: Fetch package dependencies
+        run: zig build --fetch
+
+      - name: Run unit tests
+        run: zig build test
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build web bundle
+        run: zig build web
+
+      - name: Upload web artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: zig-out/web
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
