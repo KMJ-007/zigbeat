@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en-us">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport"
+		content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />
+	<title>Zigbeat</title>
+	<style>
+		html,
+		body {
+			margin: 0;
+			height: 100%;
+			width: 100%;
+			background-color: black;
+			overflow: hidden;
+		}
+
+		canvas {
+			position: fixed;
+			inset: 0;
+			border: 0;
+			margin: 0;
+			width: 100vw;
+			height: 100vh;
+			overflow: hidden;
+			display: block;
+			image-rendering: optimizeSpeed;
+			image-rendering: -moz-crisp-edges;
+			image-rendering: -o-crisp-edges;
+			image-rendering: -webkit-optimize-contrast;
+			image-rendering: optimize-contrast;
+			image-rendering: crisp-edges;
+			image-rendering: pixelated;
+			-ms-interpolation-mode: nearest-neighbor;
+		}
+
+		#start-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(0, 0, 0, 0.95);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			color: #00ff00;
+			font-family: monospace;
+			font-size: 24px;
+			cursor: pointer;
+			z-index: 1000;
+			transition: opacity 0.3s ease;
+		}
+
+		#start-overlay.hidden {
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		#start-overlay p {
+			margin: 10px 0;
+			text-align: center;
+		}
+
+		#start-overlay .subtitle {
+			font-size: 16px;
+			color: #888;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="start-overlay">
+		<p>Play</p>
+	</div>
+	<canvas  id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+	<script type='text/javascript'>
+		var Module = {
+			preRun: [],
+			postRun: [],
+			print: (function () {
+				return function (text) {
+					text = Array.prototype.slice.call(arguments).join(' ');
+					console.log(text);
+				};
+			})(),
+			printErr: function (text) {
+				text = Array.prototype.slice.call(arguments).join(' ');
+				console.error(text);
+			},
+			canvas: (function () {
+				var canvas = document.getElementById('canvas');
+				return canvas;
+			})(),
+			setStatus: function (text) { },
+			monitorRunDependencies: function (left) { },
+		};
+		window.onerror = function () {
+			console.log("onerror: " + event.message);
+		};
+	</script>
+	<script>
+		window.va = window.va || function () {(window.vaq = window.vaq || []).push(arguments);};
+	</script>
+	<script>
+		// ============= URL State Management =============
+
+		// Parse URL hash parameters (e.g., #bb=...)
+		function getUrlParams() {
+			var params = {};
+			var hash = window.location.hash.substring(1); // Remove '#'
+
+			if (hash) {
+				var pairs = hash.split('&');
+				for (var i = 0; i < pairs.length; i++) {
+					var pair = pairs[i].split('=');
+					if (pair.length === 2) {
+						params[decodeURIComponent(pair[0])] = pair[1];
+					}
+				}
+			}
+
+			return params;
+		}
+
+		// Get bb parameter from URL
+		function getBbFromUrl() {
+			try {
+				var params = getUrlParams();
+				var bb = params.bb || null;
+				if (bb) {
+					console.log('getBbFromUrl: Found bb parameter:', bb);
+					// Validate it's a valid hex string (only 0-9, a-f, A-F)
+					if (!/^[0-9a-fA-F]*$/.test(bb)) {
+						console.warn('getBbFromUrl: Invalid hex string, ignoring');
+						return null;
+					}
+				}
+				return bb;
+			} catch (e) {
+				console.error('getBbFromUrl: Error parsing URL:', e);
+				return null;
+			}
+		}
+
+		// Update URL hash with bb parameter (without page reload)
+		function updateUrlWithBb(hexString) {
+			try {
+				if (!hexString) {
+					// Clear bb parameter if empty
+					window.history.replaceState(null, '', window.location.pathname);
+				} else {
+					// Don't encode hex string - it's already safe for URLs
+					window.history.replaceState(null, '', '#bb=' + hexString);
+				}
+			} catch (e) {
+				console.error('updateUrlWithBb: Error updating URL:', e);
+			}
+		}
+
+		// Export functions for Zig to call
+		window.zigbeat = window.zigbeat || {};
+		window.zigbeat.getBbFromUrl = getBbFromUrl;
+		window.zigbeat.updateUrlWithBb = updateUrlWithBb;
+
+		// ============= Audio Management =============
+
+		// Resume AudioContext on first user interaction
+		var audioStarted = false;
+
+		function resumeAudio() {
+			if (audioStarted) return;
+			audioStarted = true;
+
+			console.log('User interaction detected, resuming audio...');
+
+			// Hide overlay with fade effect
+			var overlay = document.getElementById('start-overlay');
+			overlay.classList.add('hidden');
+
+			// Remove overlay from DOM after transition
+			setTimeout(function() {
+				if (overlay.parentNode) {
+					overlay.parentNode.removeChild(overlay);
+				}
+			}, 300);
+
+			// Resume any suspended AudioContexts (used by Emscripten/miniaudio)
+			if (window.miniaudio && window.miniaudio.devices) {
+				window.miniaudio.devices.forEach(function(device) {
+					if (device.webaudio && device.webaudio.state === 'suspended') {
+						device.webaudio.resume().then(function() {
+							console.log('AudioContext resumed successfully');
+						}).catch(function(err) {
+							console.error('Failed to resume AudioContext:', err);
+						});
+					}
+				});
+			}
+		}
+
+		// Listen for any user interaction (once)
+		document.addEventListener('click', resumeAudio, { once: true });
+		document.addEventListener('keydown', resumeAudio, { once: true });
+		document.addEventListener('touchstart', resumeAudio, { once: true });
+
+		// Also add to Module.postRun to ensure it works after WASM loads
+		Module.postRun.push(function() {
+			console.log('Module loaded, waiting for user interaction to start audio');
+
+			// Add audio debugging after a short delay to ensure miniaudio is initialized
+			setTimeout(function() {
+				if (window.miniaudio && window.miniaudio.devices && window.miniaudio.devices.length > 0) {
+					var device = window.miniaudio.devices[0];
+					if (device.scriptNode) {
+						console.log('=== Audio Debug Info ===');
+						console.log('Buffer size:', device.scriptNode.bufferSize);
+						console.log('Sample rate:', device.webaudio.sampleRate);
+						console.log('Channels:', device.scriptNode.channelCount);
+
+						// Wrap the original onaudioprocess to log buffer data
+						var originalCallback = device.scriptNode.onaudioprocess;
+						var callCount = 0;
+
+						device.scriptNode.onaudioprocess = function(e) {
+							// Measure callback performance
+							var startTime = performance.now();
+
+							// Call original callback first
+							originalCallback.call(this, e);
+
+							var endTime = performance.now();
+							var callbackDuration = endTime - startTime;
+
+							// Log first few callbacks for debugging
+							if (callCount < 5) {
+								console.log('Callback took:', callbackDuration.toFixed(3), 'ms');
+								callCount++;
+								console.log('=== Audio Callback #' + callCount + ' ===');
+
+								// Check output buffer
+								var leftChannel = e.outputBuffer.getChannelData(0);
+								var rightChannel = e.outputBuffer.getChannelData(1);
+
+								// Log first 10 samples
+								console.log('First 10 LEFT samples:', Array.from(leftChannel.slice(0, 10)));
+								console.log('First 10 RIGHT samples:', Array.from(rightChannel.slice(0, 10)));
+
+								// Check for NaN or Infinity
+								var hasNaN = false;
+								var hasInf = false;
+								for (var i = 0; i < leftChannel.length; i++) {
+									if (isNaN(leftChannel[i]) || isNaN(rightChannel[i])) hasNaN = true;
+									if (!isFinite(leftChannel[i]) || !isFinite(rightChannel[i])) hasInf = true;
+								}
+
+								if (hasNaN) console.error('WARNING: Buffer contains NaN values!');
+								if (hasInf) console.error('WARNING: Buffer contains Infinity values!');
+
+								// Calculate min/max/avg
+								var min = Math.min(...leftChannel);
+								var max = Math.max(...leftChannel);
+								var sum = leftChannel.reduce((a, b) => a + b, 0);
+								var avg = sum / leftChannel.length;
+
+								console.log('Buffer stats - Min:', min, 'Max:', max, 'Avg:', avg);
+							}
+						};
+
+						console.log('Audio debugging enabled - check console during playback');
+					}
+				}
+			}, 1000);
+		});
+	</script>
+	<script async type="text/javascript" src="index.js"></script>
+</body>
+
+</html>

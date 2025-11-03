@@ -1,4 +1,6 @@
 .zig-cache/
-zig-out/
+zig-out/*
+!zig-out/web/
+!zig-out/web/**
 emsdk
 *.o
