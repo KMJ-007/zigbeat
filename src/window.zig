@@ -39,6 +39,14 @@ pub const Window = struct {
         }
     }
 
+    pub fn getWidth(self: *const Window) i32 {
+        return self.width;
+    }
+
+    pub fn getHeight(self: *const Window) i32 {
+        return self.height;
+    }
+
     pub fn handleFullscreenToggle(self: *Window) void {
         if (rl.isKeyPressed(rl.KeyboardKey.enter) and
             (rl.isKeyDown(rl.KeyboardKey.left_alt) or rl.isKeyDown(rl.KeyboardKey.right_alt)))
