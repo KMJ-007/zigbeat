@@ -1,4 +1,4 @@
-name: Build and Deploy Web Bundle
+name: Deploy Web Bundle to GitHub Pages
 on:
   push:
     branches: [main]
@@ -14,67 +14,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Cache Zig/Emscripten
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/zig
-            ${{ runner.temp }}/emsdk-main  # Matches setup-emsdk's temp dir
-          key: zig-raylib-emsdk-4.0.3-${{ hashFiles('build.zig.zon', 'build.zig') }}-${{ runner.os }}
-          restore-keys: zig-raylib-emsdk-4.0.3-${{ runner.os }}
-
-      - name: Set up Zig
-        uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: 0.15.1
-
-      - name: Set up Emscripten SDK
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: 4.0.3
-
-      - name: Verify Tools
-        run: |
-          zig version
-          emcc --version  # Now persists: Expect 4.0.3
-
-      - name: Fetch Dependencies
-        run: zig build --fetch
-
-      - name: Run Unit Tests
-        run: zig build test
-
-      - name: Build Web Bundle
-        run: |
-          EMSDK_FETCHED=$(find ~/.cache/zig -name "emsdk_env.sh" -path "*/upstream/emscripten" | sed 's|/upstream/emscripten||')
-          if [ -n "$EMSDK_FETCHED" ]; then
-            SYSROOT="$EMSDK_FETCHED/upstream/emscripten"
-          else
-            # Fallback to action's install
-            SYSROOT="$EMSDK/upstream/emscripten"
-          fi
-          echo "Using sysroot: $SYSROOT"
-          zig build web --sysroot "$SYSROOT"
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: zig-out/web
 
-  deploy:
-    needs: build
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         id: deploy
         uses: actions/deploy-pages@v4
