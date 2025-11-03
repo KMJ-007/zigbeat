@@ -35,9 +35,11 @@ jobs:
 
       - name: Activate Emscripten
         run: |
-          source "$EMSDK/upstream/emscripten/emsdk_env.sh"
-          echo "EMSDK=$EMSDK" >> $GITHUB_ENV
-          echo "$EMSDK/upstream/emscripten" >> $GITHUB_PATH
+            echo "Sourcing emsdk_env.sh from $EMSDK"
+            source "$EMSDK/emsdk_env.sh"
+            echo "EMSDK=$EMSDK" >> $GITHUB_ENV
+            echo "$EMSDK" >> $GITHUB_PATH
+            echo "$EMSDK/upstream/emscripten" >> $GITHUB_PATH
 
       - name: Fetch package dependencies
         run: zig build --fetch
