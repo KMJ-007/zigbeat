@@ -142,32 +142,32 @@ pub const Evaluator = struct {
 // test for the evulators
 test "evaluator: simple variable t" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
 
+    try evaluator.setExpression("t");
     defer evaluator.deinit();
 
     // when t=0
-    try testing.expectEqual(@as(f32, 0.0), evaluator.evaluate(0));
+    try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
 
     // when t=256
-    try testing.expectEqual(@as(f32, 256.0), evaluator.evaluate(256));
+    try testing.expectEqual(@as(f32, 256.0), try evaluator.evaluate(256));
 }
 
 test "evaluator: constant number" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "42");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("42");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 42.0), try evaluator.evaluate(0));
@@ -176,13 +176,13 @@ test "evaluator: constant number" {
 
 test "evaluator: simple addition" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t + 5");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t + 5");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 5.0), try evaluator.evaluate(0));
@@ -192,13 +192,13 @@ test "evaluator: simple addition" {
 
 test "evaluator: simple subtraction" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t - 5");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t - 5");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, -5.0), try evaluator.evaluate(0));
@@ -208,13 +208,13 @@ test "evaluator: simple subtraction" {
 
 test "evaluator: simple multiplication" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t * 5");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t * 5");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -224,13 +224,13 @@ test "evaluator: simple multiplication" {
 
 test "evaluator: simple division" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t / 5");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t / 5");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -240,13 +240,13 @@ test "evaluator: simple division" {
 
 test "evaluator: simple modulo" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t % 256");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t % 256");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -257,13 +257,13 @@ test "evaluator: simple modulo" {
 
 test "evaluator: bitwise right shift" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t >> 5");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t >> 5");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -274,13 +274,13 @@ test "evaluator: bitwise right shift" {
 
 test "evaluator: bitwise left shift" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t << 2");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t << 2");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -291,13 +291,13 @@ test "evaluator: bitwise left shift" {
 
 test "evaluator: bitwise And" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t & 15");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t & 15");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -308,13 +308,13 @@ test "evaluator: bitwise And" {
 
 test "evaluator: bitwise Or" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t | 8");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t | 8");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 8.0), try evaluator.evaluate(0));
@@ -325,13 +325,13 @@ test "evaluator: bitwise Or" {
 
 test "evaluator: bitwise xor" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t ^ 255");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t ^ 255");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 255.0), try evaluator.evaluate(0));
@@ -342,13 +342,13 @@ test "evaluator: bitwise xor" {
 
 test "evaluator: or" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t || 4");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t || 4");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 1.0), try evaluator.evaluate(0)); // 0 || 4 = true
@@ -358,13 +358,13 @@ test "evaluator: or" {
 
 test "evaluator: and" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "t && 4");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("t && 4");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0)); // 0 && 4 = false
@@ -374,13 +374,13 @@ test "evaluator: and" {
 
 test "evaluator: abs" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "abs(t - 50)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("abs(t - 50)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 50.0), try evaluator.evaluate(0));
@@ -390,13 +390,13 @@ test "evaluator: abs" {
 
 test "evaluator: sqrt" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "sqrt(t)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("sqrt(t)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -407,13 +407,13 @@ test "evaluator: sqrt" {
 
 test "evaluator: round" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "round(t / 10)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("round(t / 10)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -424,13 +424,13 @@ test "evaluator: round" {
 
 test "evaluator: tan" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "tan(0)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("tan(0)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -438,13 +438,13 @@ test "evaluator: tan" {
 
 test "evaluator: log" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "log(t + 1)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("log(t + 1)");
     defer evaluator.deinit();
 
     const result = try evaluator.evaluate(0); // log(1) = 0
@@ -453,13 +453,13 @@ test "evaluator: log" {
 
 test "evaluator: exp" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "exp(0)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("exp(0)");
     defer evaluator.deinit();
 
     const result = try evaluator.evaluate(0); // exp(0) = 1
@@ -468,13 +468,13 @@ test "evaluator: exp" {
 
 test "evaluator: sin" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "sin(0)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("sin(0)");
     defer evaluator.deinit();
 
     const result = try evaluator.evaluate(0); // sin(0) = 0
@@ -483,13 +483,13 @@ test "evaluator: sin" {
 
 test "evaluator: cos" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "cos(0)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("cos(0)");
     defer evaluator.deinit();
 
     const result = try evaluator.evaluate(0); // cos(0) = 1
@@ -498,13 +498,13 @@ test "evaluator: cos" {
 
 test "evaluator: floor" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "floor(t / 10)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("floor(t / 10)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -515,13 +515,13 @@ test "evaluator: floor" {
 
 test "evaluator: ceil" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "ceil(t / 10)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("ceil(t / 10)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -532,13 +532,13 @@ test "evaluator: ceil" {
 
 test "evaluator: int" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "floor(t / 10)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("floor(t / 10)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 2.0), try evaluator.evaluate(25));
@@ -546,13 +546,13 @@ test "evaluator: int" {
 
 test "evaluator: min" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "min(t, 100)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("min(t, 100)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0));
@@ -563,13 +563,13 @@ test "evaluator: min" {
 
 test "evaluator: max" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "max(t, 100)");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("max(t, 100)");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 100.0), try evaluator.evaluate(0));
@@ -580,13 +580,13 @@ test "evaluator: max" {
 
 test "evaluator: parenthesis" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "(t + 5) * 2");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("(t + 5) * 2");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 10.0), try evaluator.evaluate(0)); // (0+5)*2
@@ -596,13 +596,13 @@ test "evaluator: parenthesis" {
 
 test "evaluator: bytebeat example" {
     const allocator = testing.allocator;
-    var expr = std.ArrayList(u8).empty;
-    try expr.appendSlice(allocator, "(t >> 10) * 42");
+    const expr = std.ArrayList(u8).empty;
 
     var evaluator = try Evaluator.init(allocator, .{
         .expression = expr,
         .beat_type = .bytebeat,
     });
+    try evaluator.setExpression("(t >> 10) * 42");
     defer evaluator.deinit();
 
     try testing.expectEqual(@as(f32, 0.0), try evaluator.evaluate(0)); // (0>>10)*42 = 0

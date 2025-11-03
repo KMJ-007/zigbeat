@@ -183,24 +183,29 @@ fn parseFunctionName(name: []const u8) !FunctionType {
 }
 
 test "parser: simple number" {
-    const allocator = std.testing.allocator;
-    var parser = Parser.init(allocator, "42");
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
 
+    var parser = Parser.init(arena.allocator(), "42");
     const ast = try parser.parse();
     try std.testing.expectEqual(@as(f32, 42.0), ast.number);
 }
 
 test "parser: variable t" {
-    const allocator = std.testing.allocator;
-    var parser = Parser.init(allocator, "t");
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var parser = Parser.init(arena.allocator(), "t");
 
     const ast = try parser.parse();
     try std.testing.expect(ast.* == .variable);
 }
 
 test "parser: simple addition" {
-    const allocator = std.testing.allocator;
-    var parser = Parser.init(allocator, "t + 5");
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var parser = Parser.init(arena.allocator(), "t + 5");
 
     const ast = try parser.parse();
     try std.testing.expect(ast.* == .binary_op);
@@ -208,8 +213,10 @@ test "parser: simple addition" {
 }
 
 test "parser: precedence test" {
-    const allocator = std.testing.allocator;
-    var parser = Parser.init(allocator, "2 + 3 * 4");
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var parser = Parser.init(arena.allocator(), "2 + 3 * 4");
 
     const ast = try parser.parse();
     try std.testing.expectEqual(BinaryOp.add, ast.binary_op.op);
@@ -218,8 +225,10 @@ test "parser: precedence test" {
 }
 
 test "parser: bytebeat expression" {
-    const allocator = std.testing.allocator;
-    var parser = Parser.init(allocator, "(t >> 10) * 42");
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    var parser = Parser.init(arena.allocator(), "(t >> 10) * 42");
 
     const ast = try parser.parse();
     try std.testing.expectEqual(BinaryOp.mul, ast.binary_op.op);
