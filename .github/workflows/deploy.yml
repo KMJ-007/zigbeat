@@ -29,6 +29,15 @@ jobs:
 
       - name: Set up Emscripten SDK
         uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.3
+          actions-cache: false
+
+      - name: Activate Emscripten
+        run: |
+          source "$EMSDK/upstream/emscripten/emsdk_env.sh"
+          echo "EMSDK=$EMSDK" >> $GITHUB_ENV
+          echo "$EMSDK/upstream/emscripten" >> $GITHUB_PATH
 
       - name: Fetch package dependencies
         run: zig build --fetch
