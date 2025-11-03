@@ -27,6 +27,9 @@ jobs:
         with:
           version: 0.15.1
 
+      - name: Set up Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+
       - name: Fetch package dependencies
         run: zig build --fetch
 
