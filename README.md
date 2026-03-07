@@ -2,7 +2,7 @@
 
 Zigbeat is a bytebeat editor and player built with Zig and Raylib.
 
-Try here: [kmj-007.github.io/zigbeat](kmj-007.github.io/zigbeat)
+Try here: [kmj-007.github.io/zigbeat](http://kmj-007.github.io/zigbeat)
 
 # todo:
 
